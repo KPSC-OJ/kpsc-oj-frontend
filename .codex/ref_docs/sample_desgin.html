@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPSC Online Judge Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="min-h-screen">
+    <!-- PublicLayout / Landing -->
+    <header class="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-sm font-black text-white">K</div>
+          <div>
+            <div class="text-sm font-bold leading-4">KPSC OJ</div>
+            <div class="text-xs text-slate-500">Kookmin Online Judge</div>
+          </div>
+        </div>
+        <nav class="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
+          <a href="#problems" class="hover:text-brand-600">문제</a>
+          <a href="#submissions" class="hover:text-brand-600">제출</a>
+          <a href="#ranking" class="hover:text-brand-600">랭킹</a>
+          <a href="#admin" class="hover:text-brand-600">출제</a>
+        </nav>
+        <div class="flex items-center gap-2">
+          <button class="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">로그인</button>
+          <button class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">시작하기</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-16">
+        <div class="flex flex-col justify-center">
+          <span class="mb-4 w-fit rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">국민대학교 전용 Online Judge</span>
+          <h1 class="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">KPSC를 위한<br />깔끔한 문제 풀이 플랫폼</h1>
+          <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600">문제 풀이, 제출 기록, 랭킹, 출제 기능을 한 곳에 모은 내부용 온라인 저지입니다. GitHub/Vercel 스타일의 정돈된 개발자 도구형 UI를 지향합니다.</p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <button class="rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-brand-700">문제 풀러가기</button>
+            <button class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">최근 제출 보기</button>
+          </div>
+        </div>
+
+        <div class="grid gap-4">
+          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+              <h2 class="font-bold">오늘의 문제</h2>
+              <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Easy</span>
+            </div>
+            <p class="text-lg font-black">1001. A+B 확장판</p>
+            <p class="mt-2 text-sm text-slate-500">기본 입출력과 정수 연산을 연습하는 문제입니다.</p>
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div class="text-2xl font-black">128</div>
+              <div class="mt-1 text-xs font-medium text-slate-500">전체 문제</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div class="text-2xl font-black">34</div>
+              <div class="mt-1 text-xs font-medium text-slate-500">오늘 제출</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div class="text-2xl font-black">72%</div>
+              <div class="mt-1 text-xs font-medium text-slate-500">평균 정답률</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AppLayout -->
+      <section id="problems" class="border-y border-slate-200 bg-white">
+        <div class="mx-auto grid max-w-7xl lg:grid-cols-[240px_1fr]">
+          <aside class="hidden border-r border-slate-200 bg-slate-50/70 p-4 lg:block">
+            <div class="mb-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-400">Menu</div>
+            <nav class="space-y-1 text-sm font-semibold">
+              <a class="block rounded-xl bg-brand-50 px-3 py-2 text-brand-700" href="#problems">Problems</a>
+              <a class="block rounded-xl px-3 py-2 text-slate-600 hover:bg-white" href="#submissions">Submissions</a>
+              <a class="block rounded-xl px-3 py-2 text-slate-600 hover:bg-white" href="#ranking">Ranking</a>
+              <a class="block rounded-xl px-3 py-2 text-slate-600 hover:bg-white" href="#admin">Admin</a>
+            </nav>
+          </aside>
+
+          <div class="p-4 sm:p-6 lg:p-8">
+            <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p class="text-sm font-bold text-brand-600">Problems</p>
+                <h2 class="text-2xl font-black tracking-tight">문제 목록</h2>
+                <p class="mt-1 text-sm text-slate-500">검색, 난이도, 태그, 해결 여부로 문제를 찾아보세요.</p>
+              </div>
+              <button class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white">문제 출제</button>
+            </div>
+
+            <div class="mb-4 grid gap-3 md:grid-cols-[1fr_140px_140px_140px]">
+              <input class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-500" placeholder="문제 제목 또는 번호 검색" />
+              <select class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option>난이도</option></select>
+              <select class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option>태그</option></select>
+              <select class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option>해결 여부</option></select>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <table class="w-full min-w-[760px] text-left text-sm">
+                <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th class="px-4 py-3">번호</th>
+                    <th class="px-4 py-3">제목</th>
+                    <th class="px-4 py-3">난이도</th>
+                    <th class="px-4 py-3">태그</th>
+                    <th class="px-4 py-3">정답률</th>
+                    <th class="px-4 py-3">상태</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-4 font-mono text-slate-500">1001</td>
+                    <td class="px-4 py-4 font-bold">A+B 확장판</td>
+                    <td class="px-4 py-4"><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Easy</span></td>
+                    <td class="px-4 py-4 text-slate-500">math, implementation</td>
+                    <td class="px-4 py-4">81.2%</td>
+                    <td class="px-4 py-4"><span class="text-emerald-600">Solved</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-4 font-mono text-slate-500">1204</td>
+                    <td class="px-4 py-4 font-bold">KPSC 회의실 배정</td>
+                    <td class="px-4 py-4"><span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Medium</span></td>
+                    <td class="px-4 py-4 text-slate-500">greedy, sorting</td>
+                    <td class="px-4 py-4">43.7%</td>
+                    <td class="px-4 py-4"><span class="text-slate-400">Unsolved</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-4 font-mono text-slate-500">1557</td>
+                    <td class="px-4 py-4 font-bold">Judge Worker Queue</td>
+                    <td class="px-4 py-4"><span class="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">Hard</span></td>
+                    <td class="px-4 py-4 text-slate-500">dp, graph</td>
+                    <td class="px-4 py-4">21.9%</td>
+                    <td class="px-4 py-4"><span class="text-slate-400">Unsolved</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Problem Detail -->
+      <section class="bg-slate-50 py-10">
+        <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[1fr_300px] lg:px-8">
+          <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="mb-6 border-b border-slate-200 pb-5">
+              <div class="mb-2 flex flex-wrap items-center gap-2">
+                <span class="font-mono text-sm text-slate-400">1001</span>
+                <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Easy</span>
+              </div>
+              <h2 class="text-3xl font-black tracking-tight">A+B 확장판</h2>
+            </div>
+            <div class="prose max-w-none">
+              <h3 class="text-lg font-black">문제</h3>
+              <p class="mt-2 text-sm leading-7 text-slate-600">두 정수 A와 B를 입력받은 다음, A+B를 출력하는 프로그램을 작성하시오.</p>
+              <h3 class="mt-8 text-lg font-black">입력</h3>
+              <p class="mt-2 text-sm leading-7 text-slate-600">첫째 줄에 A와 B가 주어진다.</p>
+              <h3 class="mt-8 text-lg font-black">출력</h3>
+              <p class="mt-2 text-sm leading-7 text-slate-600">첫째 줄에 A+B를 출력한다.</p>
+              <div class="mt-8 grid gap-4 md:grid-cols-2">
+                <div>
+                  <div class="mb-2 text-sm font-bold">예제 입력</div>
+                  <pre class="rounded-xl bg-slate-950 p-4 text-sm text-slate-100">1 2</pre>
+                </div>
+                <div>
+                  <div class="mb-2 text-sm font-bold">예제 출력</div>
+                  <pre class="rounded-xl bg-slate-950 p-4 text-sm text-slate-100">3</pre>
+                </div>
+              </div>
+            </div>
+          </article>
+          <aside class="space-y-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <button class="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-black text-white hover:bg-brand-700">제출하기</button>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 class="mb-4 font-black">문제 정보</h3>
+              <dl class="space-y-3 text-sm">
+                <div class="flex justify-between"><dt class="text-slate-500">시간 제한</dt><dd class="font-bold">1초</dd></div>
+                <div class="flex justify-between"><dt class="text-slate-500">메모리 제한</dt><dd class="font-bold">128MB</dd></div>
+                <div class="flex justify-between"><dt class="text-slate-500">제출</dt><dd class="font-bold">1,240</dd></div>
+                <div class="flex justify-between"><dt class="text-slate-500">정답률</dt><dd class="font-bold">81.2%</dd></div>
+              </dl>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ProblemWorkspaceLayout -->
+      <section class="bg-slate-950 py-10 text-slate-100">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <p class="text-sm font-bold text-brand-100">ProblemWorkspaceLayout</p>
+              <h2 class="text-2xl font-black">제출 / IDE 화면</h2>
+            </div>
+            <button class="rounded-xl bg-brand-600 px-4 py-2 text-sm font-black text-white">제출</button>
+          </div>
+          <div class="grid overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl lg:grid-cols-[0.9fr_1.1fr]">
+            <div class="border-b border-slate-800 p-5 lg:border-b-0 lg:border-r">
+              <div class="mb-4 flex items-center justify-between">
+                <h3 class="font-black">1001. A+B 확장판</h3>
+                <span class="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-300">Easy</span>
+              </div>
+              <p class="text-sm leading-7 text-slate-300">두 정수 A와 B를 입력받은 다음, A+B를 출력하는 프로그램을 작성하시오.</p>
+              <div class="mt-6 grid gap-4">
+                <pre class="rounded-xl bg-black/40 p-4 text-sm text-slate-200">Input\n1 2</pre>
+                <pre class="rounded-xl bg-black/40 p-4 text-sm text-slate-200">Output\n3</pre>
+              </div>
+            </div>
+            <div class="flex min-h-[520px] flex-col">
+              <div class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+                <select class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200">
+                  <option>C++17</option>
+                  <option>Java 21</option>
+                  <option>Python 3</option>
+                </select>
+                <span class="text-xs text-slate-500">Monaco Editor 영역 예정</span>
+              </div>
+              <pre class="flex-1 overflow-auto p-5 font-mono text-sm leading-7 text-slate-200">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int a, b;
+    cin &gt;&gt; a &gt;&gt; b;
+    cout &lt;&lt; a + b &lt;&lt; '\n';
+    return 0;
+}</pre>
+              <div class="border-t border-slate-800 bg-black/30 p-4">
+                <div class="mb-2 text-xs font-bold uppercase text-slate-500">Result Console</div>
+                <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-300">Accepted · 2ms · 2024KB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Submission / Ranking / Admin Preview -->
+      <section id="submissions" class="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:px-8">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 class="text-xl font-black">최근 제출</h2>
+          <div class="mt-4 space-y-3">
+            <div class="flex items-center justify-between rounded-xl border border-slate-100 p-3"><span class="font-bold">A+B 확장판</span><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Accepted</span></div>
+            <div class="flex items-center justify-between rounded-xl border border-slate-100 p-3"><span class="font-bold">회의실 배정</span><span class="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">Wrong Answer</span></div>
+            <div class="flex items-center justify-between rounded-xl border border-slate-100 p-3"><span class="font-bold">Queue</span><span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Time Limit</span></div>
+          </div>
+        </div>
+        <div id="ranking" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 class="text-xl font-black">랭킹</h2>
+          <div class="mt-4 space-y-3">
+            <div class="flex items-center justify-between rounded-xl bg-slate-50 p-3"><span class="font-black">1. kpsc_master</span><span class="text-sm font-bold text-brand-600">128 solved</span></div>
+            <div class="flex items-center justify-between rounded-xl bg-slate-50 p-3"><span class="font-black">2. minjae</span><span class="text-sm font-bold text-brand-600">97 solved</span></div>
+            <div class="flex items-center justify-between rounded-xl bg-slate-50 p-3"><span class="font-black">3. newbie</span><span class="text-sm font-bold text-brand-600">42 solved</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="admin" class="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="mb-6">
+            <p class="text-sm font-bold text-brand-600">Admin</p>
+            <h2 class="text-2xl font-black">문제 생성 폼</h2>
+          </div>
+          <div class="grid gap-4 md:grid-cols-2">
+            <input class="rounded-xl border border-slate-200 px-4 py-3 text-sm" placeholder="문제 제목" />
+            <input class="rounded-xl border border-slate-200 px-4 py-3 text-sm" placeholder="태그: dp, graph" />
+            <input class="rounded-xl border border-slate-200 px-4 py-3 text-sm" placeholder="시간 제한" />
+            <input class="rounded-xl border border-slate-200 px-4 py-3 text-sm" placeholder="메모리 제한" />
+            <textarea class="min-h-48 rounded-xl border border-slate-200 px-4 py-3 text-sm md:col-span-2" placeholder="Markdown 문제 설명"></textarea>
+          </div>
+          <div class="mt-5 flex justify-end">
+            <button class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white">저장</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

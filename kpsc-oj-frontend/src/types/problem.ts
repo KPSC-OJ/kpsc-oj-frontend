@@ -6,6 +6,11 @@ export type ProblemSummary = {
   memoryLimitMegabytes: number
 }
 
+export type ProblemListItem = ProblemSummary & {
+  canEdit: boolean
+  createdByServiceUsername: string
+}
+
 export type ProblemExample = {
   order: number
   input: string
@@ -32,5 +37,5 @@ export type ProblemPage = {
   pageSize: number
   totalElements: number
   totalPages: number
-  problems: ProblemSummary[]
+  problems: ProblemListItem[]
 }

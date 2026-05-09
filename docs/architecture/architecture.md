@@ -11,7 +11,8 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 - 데이터베이스: 프론트엔드 직접 사용 없음
 - 인증 사용: Google ID token 기반 백엔드 로그인, signup, token refresh, logout, session role 연동
 - 문제/제출 사용: authenticated backend API 연동
-- 관리자 문제 생성/수정: `ADMIN` role 세션에만 화면 노출, backend problem definition API 연동
+- 관리자 문제 생성: `ADMIN` role 세션에만 화면 노출, backend problem creation API 연동
+- 문제 수정: 문제 목록 응답의 생성자 정보로 본인이 출제한 문제에만 수정 진입 노출, backend problem definition API에서 생성자 권한 최종 검증
 - 외부 API 연동: Google Identity Services script, kpsc-oj-backend auth API
 
 ## 계층 방향
@@ -54,7 +55,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | `/submissions` | AppLayout + ProtectedRoute | SubmissionsPage | 인증된 내 제출 기록 |
 | `/ranking` | AppLayout + ProtectedRoute | RankingPage | 랭킹 준비 상태 |
 | `/admin/problems/new` | AppLayout + ProtectedRoute requiredRole=ADMIN | AdminProblemNewPage | `ADMIN` 세션만 접근 가능한 문제 생성 폼 |
-| `/admin/problems/:problemNumber/edit` | AppLayout + ProtectedRoute requiredRole=ADMIN | AdminProblemEditPage | `ADMIN` 세션만 접근 가능한 문제 수정 폼 |
+| `/admin/problems/:problemNumber/edit` | AppLayout + ProtectedRoute | AdminProblemEditPage | 인증 사용자가 접근할 수 있으나 백엔드가 문제 생성자만 전체 정의 조회와 수정을 허용 |
 
 ## 아키텍처 결정
 | Date | Decision | Reason | Impact |
@@ -76,3 +77,5 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | 2026-05-09 | 제출 생성 후 제출 상세 API를 polling한다. | 백엔드가 제출을 `QUEUED`로 저장한 뒤 비동기로 채점하기 때문이다. | `SubmitPage`는 제출 생성 직후 `GET /api/v1/submissions/{submissionId}`를 조회하고 진행 중 상태에서는 2.5초 간격으로 결과를 갱신한다. |
 | 2026-05-09 | 보호 API 호출 전에 auth store가 access token을 갱신한다. | access token TTL이 15분이라 사용 중 세션 만료가 빈번하게 발생할 수 있기 때문이다. | Hook은 `requestWithFreshSession()`으로 service를 호출하고, `AuthProvider`는 `POST /api/v1/auth/refresh` rotation 결과를 localStorage에 저장한다. |
 | 2026-05-09 | 문제 생성과 수정 폼을 `ProblemDefinitionForm`으로 공유한다. | 백엔드의 생성/수정 request DTO가 같은 문제 정의 구조를 사용하기 때문이다. | 생성 페이지는 `POST /api/v1/problems`, 수정 페이지는 definition 조회 후 `PATCH /api/v1/problems/{problemNumber}`를 호출한다. |
+| 2026-05-10 | 문제 수정 진입은 본인이 출제한 문제에만 노출한다. | 관리자라도 본인이 출제한 문제가 아니면 수정할 수 없어야 한다는 요구사항을 반영하기 위함. | 문제 목록 DTO의 `createdByServiceUsername`과 auth session의 `serviceUsername`이 일치할 때만 수정 버튼을 표시하고, 직접 접근은 definition API의 403으로 차단한다. |
+| 2026-05-10 | 제출 화면의 문제 지문은 Markdown으로 렌더링한다. | 문제 본문은 Markdown 문법으로 작성되므로 풀이 사용자는 원문이 아니라 렌더링된 지문을 봐야 한다. | `SubmitPage`는 `MarkdownContent`를 사용해 `statementMarkdown`을 표시한다. |

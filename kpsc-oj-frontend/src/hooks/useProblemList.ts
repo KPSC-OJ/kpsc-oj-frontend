@@ -5,17 +5,35 @@ import type { AuthApiError } from '../types/auth'
 import type { ProblemPage } from '../types/problem'
 import type { ProblemListResponseDto } from '../types/problemApi'
 
-function mapProblemListResponse(responseDto: ProblemListResponseDto): ProblemPage {
+function normalizeServiceUsername(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? ''
+}
+
+function mapProblemListResponse(
+  responseDto: ProblemListResponseDto,
+  currentServiceUsername: string | undefined,
+): ProblemPage {
+  const normalizedCurrentServiceUsername = normalizeServiceUsername(currentServiceUsername)
+
   return {
     page: responseDto.page,
     pageSize: responseDto.pageSize,
-    problems: responseDto.problems.map((problemDto) => ({
-      memoryLimitMegabytes: problemDto.memoryLimitMegabytes,
-      problemNumber: problemDto.problemNumber,
-      tag: problemDto.tag,
-      timeLimitSeconds: problemDto.timeLimitSeconds,
-      title: problemDto.title,
-    })),
+    problems: responseDto.problems.map((problemDto) => {
+      const createdByServiceUsername = problemDto.createdByServiceUsername ?? ''
+
+      return {
+        canEdit:
+          Boolean(normalizedCurrentServiceUsername) &&
+          normalizeServiceUsername(createdByServiceUsername) ===
+            normalizedCurrentServiceUsername,
+        createdByServiceUsername,
+        memoryLimitMegabytes: problemDto.memoryLimitMegabytes,
+        problemNumber: problemDto.problemNumber,
+        tag: problemDto.tag,
+        timeLimitSeconds: problemDto.timeLimitSeconds,
+        title: problemDto.title,
+      }
+    }),
     totalElements: responseDto.totalElements,
     totalPages: responseDto.totalPages,
   }
@@ -41,7 +59,7 @@ export function useProblemList(page: number): {
   isLoading: boolean
   problemPage: ProblemPage | null
 } {
-  const { isAuthenticated, requestWithFreshSession } = useAuth()
+  const { isAuthenticated, requestWithFreshSession, session } = useAuth()
   const [problemPage, setProblemPage] = useState<ProblemPage | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -63,7 +81,7 @@ export function useProblemList(page: number): {
         )
 
         if (isActive) {
-          setProblemPage(mapProblemListResponse(responseDto))
+          setProblemPage(mapProblemListResponse(responseDto, session?.serviceUsername))
         }
       } catch (error) {
         if (isActive) {
@@ -82,7 +100,7 @@ export function useProblemList(page: number): {
     return () => {
       isActive = false
     }
-  }, [isAuthenticated, page, requestWithFreshSession])
+  }, [isAuthenticated, page, requestWithFreshSession, session?.serviceUsername])
 
   return { errorMessage, isLoading, problemPage }
 }

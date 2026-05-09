@@ -1,6 +1,9 @@
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
+import { BlockMath, InlineMath } from 'react-katex'
 import Markdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import 'katex/dist/katex.min.css'
 
 type MarkdownContentProps = {
   className?: string
@@ -9,6 +12,53 @@ type MarkdownContentProps = {
 
 function joinClassNames(...classNames: Array<string | undefined>): string {
   return classNames.filter(Boolean).join(' ')
+}
+
+function classNameIncludes(className: string | undefined, targetClassName: string): boolean {
+  return className?.split(/\s+/).includes(targetClassName) ?? false
+}
+
+function getTextContent(children: ReactNode): string {
+  if (typeof children === 'string' || typeof children === 'number') {
+    return String(children)
+  }
+
+  if (Array.isArray(children)) {
+    return children.map(getTextContent).join('')
+  }
+
+  return ''
+}
+
+function renderInlineMathError(math: string): ReactElement {
+  return (
+    <code className="rounded bg-rose-50 px-1.5 py-0.5 font-mono text-[0.9em] text-rose-700">
+      {`$${math}$`}
+    </code>
+  )
+}
+
+function renderBlockMathError(math: string): ReactElement {
+  return (
+    <pre className="overflow-x-auto rounded-md border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-700">
+      {math}
+    </pre>
+  )
+}
+
+function isMathDisplayPreNode(node: unknown): boolean {
+  const candidate = node as
+    | {
+        children?: Array<{
+          properties?: {
+            className?: unknown
+          }
+        }>
+      }
+    | undefined
+  const firstChildClassName = candidate?.children?.[0]?.properties?.className
+
+  return Array.isArray(firstChildClassName) && firstChildClassName.includes('math-display')
 }
 
 const markdownComponents: Components = {
@@ -32,6 +82,18 @@ const markdownComponents: Components = {
     )
   },
   code({ children, className }) {
+    const math = getTextContent(children).replace(/\n$/, '')
+
+    if (classNameIncludes(className, 'math-inline')) {
+      return (
+        <InlineMath math={math} renderError={() => renderInlineMathError(math)} />
+      )
+    }
+
+    if (classNameIncludes(className, 'math-display')) {
+      return <BlockMath math={math} renderError={() => renderBlockMathError(math)} />
+    }
+
     const isBlockCode = className?.startsWith('language-') ?? false
 
     return (
@@ -65,7 +127,11 @@ const markdownComponents: Components = {
   p({ children }) {
     return <p className="text-sm leading-7 text-slate-600">{children}</p>
   },
-  pre({ children }) {
+  pre({ children, node }) {
+    if (isMathDisplayPreNode(node)) {
+      return <div className="overflow-x-auto py-1">{children}</div>
+    }
+
     return (
       <pre className="overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-800">
         {children}
@@ -107,7 +173,7 @@ export function MarkdownContent({
 }: MarkdownContentProps): ReactElement {
   return (
     <div className={joinClassNames('space-y-4 text-sm text-slate-600', className)}>
-      <Markdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
+      <Markdown components={markdownComponents} remarkPlugins={[remarkGfm, remarkMath]}>
         {markdown}
       </Markdown>
     </div>

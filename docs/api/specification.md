@@ -159,7 +159,7 @@
   - `tag`: string, required, 문제 유형 태그.
   - `timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문. 제출 화면에서는 Markdown으로 렌더링해 표시한다.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문. 제출 화면에서는 Markdown과 `$...$`, `$$...$$` LaTeX 수식을 렌더링해 표시한다.
   - `exampleTestCases`: array, required, 공개 예시 테스트 케이스 목록.
   - `exampleTestCases[].order`: number, required, 예시 테스트 케이스 순서.
   - `exampleTestCases[].input`: string, required, 공개 예시 입력 본문. 빈 문자열 가능.
@@ -188,7 +188,7 @@
   - `tag`: string, required, 문제 유형 태그.
   - `timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문. `$...$`, `$$...$$` LaTeX 수식 포함 가능.
   - `checkerCode`: string, optional, C++17 checker 코드. judge 기본 출력 비교를 사용하면 null.
   - `exampleInputs`: string array, required, 공개 예시 입력 목록. 각 값 null 불가, 빈 문자열 가능.
   - `exampleOutputs`: string array, required, 공개 예시 출력 목록. `exampleInputs`와 같은 순서와 개수.
@@ -216,7 +216,7 @@
   - `tag`: string, required, 1-64자, 문제 유형 태그, null 불가.
   - `timeLimitSeconds`: number, required, 양의 정수, 채점 시간 제한 seconds 단위, null 불가.
   - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가. `$...$`, `$$...$$` LaTeX 수식 포함 가능.
   - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
   - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
   - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.
@@ -253,7 +253,7 @@
   - `tag`: string, required, 1-64자, 문제 유형 태그, null 불가.
   - `timeLimitSeconds`: number, required, 양의 정수, 채점 시간 제한 seconds 단위, null 불가.
   - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가. `$...$`, `$$...$$` LaTeX 수식 포함 가능.
   - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
   - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
   - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.

@@ -26,7 +26,7 @@
 | `Button`, `ButtonLink` | common | variant, size, children | 버튼과 라우터 링크 버튼 스타일 |
 | `Badge` | common | tone, children | 상태와 카테고리 라벨 표시 |
 | `Card` | common | children | 반복 패널 프레임 |
-| `MarkdownContent` | common | markdown | 문제 지문 같은 Markdown 본문을 React 요소로 렌더링 |
+| `MarkdownContent` | common | markdown | 문제 지문 같은 Markdown 본문과 LaTeX 수식을 React 요소로 렌더링 |
 | `GoogleIdentityButton` | auth | onCredential | Google Identity Services script 로드와 credential callback 처리 |
 | `ProtectedRoute` | auth | children, requiredRole | 인증 세션이 없으면 로그인 화면으로 이동하고, 필요한 role이 없으면 보호 화면을 조립하지 않음 |
 | `SiteHeader` | layout | none | 전역 브랜드, 주요 내비게이션, 시작 액션 표시 |
@@ -47,7 +47,7 @@
 - 로그인 응답의 `requiresSignup` 분기는 `authService`와 auth store 경계에서 처리하고, `LoginPage`는 로그인/회원가입 화면 상태 조립만 담당한다.
 - `LoginPage`는 실제 서비스 사용자를 기준으로 구성하며 backend URL, OAuth client id, raw ID token 입력 같은 개발자용 진단 UI를 표시하지 않는다.
 - 문제 조회/생성/수정 API 호출은 `Page -> problem hook -> auth store token refresh -> problemService -> Backend API` 흐름을 따른다.
-- 제출 화면의 문제 본문은 `MarkdownContent`를 통해 렌더링하고, `SubmitPage`는 Markdown 파싱 세부사항을 직접 갖지 않는다.
+- 제출 화면의 문제 본문은 `MarkdownContent`를 통해 Markdown과 `$...$`, `$$...$$` LaTeX 수식을 렌더링하고, `SubmitPage`는 Markdown/수식 파싱 세부사항을 직접 갖지 않는다.
 - 문제 생성/수정 폼의 optional checker code는 request DTO의 `checkerCode`로만 전달하며, 공백이면 요청 body에서 생략한다.
 - 제출 조회/생성/상세 API 호출은 `Page -> submission hook -> auth store token refresh -> submissionService -> Backend API` 흐름을 따른다.
 - 제출 생성 후 상세 결과는 `useSubmissionDetail`이 `SubmissionDetail` view model로 변환하며, 채점 진행 중 상태에서는 polling한다.

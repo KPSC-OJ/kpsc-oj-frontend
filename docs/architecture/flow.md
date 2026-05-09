@@ -76,7 +76,7 @@
 - Actor: 일반 사용자
 - Entry point: `/problems/:id/submit`
 - Preconditions: 로그인 세션이 있어야 하고 URL에 문제 번호가 포함되어야 한다.
-- Steps: `SubmitPage`가 `useProblemDetail(problemNumber)`로 `GET /api/v1/problems/{problemNumber}`를 호출해 문제 본문과 공개 예제를 표시한다. 문제 본문의 `statementMarkdown`은 `MarkdownContent`로 렌더링해 풀이 사용자가 Markdown 원문이 아니라 렌더링된 지문을 보게 한다. 같은 화면에서 `useMySubmissions(1, problemNumber)`로 해당 문제의 내 최근 제출을 조회한다. 사용자가 제출하면 `useCreateSubmission()`이 `POST /api/v1/submissions`를 호출한다. 생성된 제출 ID가 있으면 `useSubmissionDetail(submissionId)`가 `GET /api/v1/submissions/{submissionId}`를 호출해 채점 상태, 점수, 컴파일/런타임 오류 메시지를 조회한다. 각 보호 API 호출 전에는 `requestWithFreshSession()`이 access token 갱신을 처리한다. 제출 상태가 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING`이면 2.5초 후 상세 조회를 반복한다.
+- Steps: `SubmitPage`가 `useProblemDetail(problemNumber)`로 `GET /api/v1/problems/{problemNumber}`를 호출해 문제 본문과 공개 예제를 표시한다. 문제 본문의 `statementMarkdown`은 `MarkdownContent`로 렌더링해 풀이 사용자가 Markdown 원문이 아니라 렌더링된 지문과 `$...$`, `$$...$$` 수식을 보게 한다. 같은 화면에서 `useMySubmissions(1, problemNumber)`로 해당 문제의 내 최근 제출을 조회한다. 사용자가 제출하면 `useCreateSubmission()`이 `POST /api/v1/submissions`를 호출한다. 생성된 제출 ID가 있으면 `useSubmissionDetail(submissionId)`가 `GET /api/v1/submissions/{submissionId}`를 호출해 채점 상태, 점수, 컴파일/런타임 오류 메시지를 조회한다. 각 보호 API 호출 전에는 `requestWithFreshSession()`이 access token 갱신을 처리한다. 제출 상태가 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING`이면 2.5초 후 상세 조회를 반복한다.
 - Validation: 프론트엔드는 문제 번호가 양의 정수인지, 소스 코드가 비어 있지 않은지 확인한다. 지원 언어와 문제 존재 여부는 백엔드가 최종 검증한다.
 - Empty state: 최근 제출이 없으면 제출 기록 없음 안내를 표시한다.
 - Error state: 문제 조회 404, 제출 400/401/404, 미지원 언어 오류, 제출 상세 403/404 오류를 화면에 표시한다.

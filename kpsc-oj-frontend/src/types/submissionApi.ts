@@ -31,14 +31,6 @@ export type MySubmissionListResponseDto = {
   submissions: MySubmissionListItemDto[]
 }
 
-export type SubmissionTestCaseResultDto = {
-  order: number
-  status: string
-  executionTimeMillis?: number | null
-  memoryUsageKilobytes?: number | null
-  message?: string | null
-}
-
 export type SubmissionDetailResponseDto = {
   id: string
   problemNumber: number
@@ -47,7 +39,6 @@ export type SubmissionDetailResponseDto = {
   scorePercentage?: number | null
   submittedAt: string
   sourceCode: string
-  testCaseResults: SubmissionTestCaseResultDto[]
   compileErrorMessage?: string | null
   runtimeErrorMessage?: string | null
 }

@@ -30,6 +30,10 @@ export type SignupRequestDto = {
   signupToken: string
 }
 
+export type RefreshRequestDto = {
+  refreshToken: string
+}
+
 export type LogoutResponseDto = {
   loggedOut: boolean
 }

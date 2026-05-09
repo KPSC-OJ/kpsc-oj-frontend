@@ -7,6 +7,9 @@ export type AuthContextValue = {
   isAdmin: boolean
   isAuthenticated: boolean
   pendingSignup: PendingSignup | null
+  requestWithFreshSession: <TResult>(
+    request: (accessToken: string) => Promise<TResult>,
+  ) => Promise<TResult>
   session: AuthSession | null
   signInWithGoogleIdToken: (idToken: string) => Promise<AuthLoginResult>
   signOut: () => Promise<void>

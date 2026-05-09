@@ -7,6 +7,7 @@
 | GET | /health | public | 상태 확인 |
 | POST | /api/v1/auth/google | public | Google ID token 검증 및 로그인 시작 |
 | POST | /api/v1/auth/signup | public | 최초 로그인 사용자 서비스 아이디 등록 |
+| POST | /api/v1/auth/refresh | public | refresh token으로 access/refresh token 재발급 |
 | POST | /api/v1/auth/logout | authenticated | 현재 access token session 폐기 |
 | GET | /api/v1/problems | authenticated | 문제 목록 조회 |
 | GET | /api/v1/problems/{problemNumber} | authenticated | 문제 상세 조회 |

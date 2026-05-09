@@ -45,7 +45,7 @@ export function useMySubmissions(
   isLoading: boolean
   submissionPage: SubmissionPage | null
 } {
-  const { session } = useAuth()
+  const { isAuthenticated, requestWithFreshSession } = useAuth()
   const [submissionPage, setSubmissionPage] = useState<SubmissionPage | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -54,7 +54,7 @@ export function useMySubmissions(
     let isActive = true
 
     async function loadSubmissions(): Promise<void> {
-      if (!session) {
+      if (!isAuthenticated) {
         return
       }
 
@@ -62,10 +62,8 @@ export function useMySubmissions(
       setErrorMessage(null)
 
       try {
-        const responseDto = await listMySubmissions(
-          session.accessToken,
-          page,
-          problemNumber,
+        const responseDto = await requestWithFreshSession((accessToken) =>
+          listMySubmissions(accessToken, page, problemNumber),
         )
 
         if (isActive) {
@@ -88,7 +86,7 @@ export function useMySubmissions(
     return () => {
       isActive = false
     }
-  }, [page, problemNumber, session])
+  }, [isAuthenticated, page, problemNumber, requestWithFreshSession])
 
   return { errorMessage, isLoading, submissionPage }
 }

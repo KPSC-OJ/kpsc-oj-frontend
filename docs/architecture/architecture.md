@@ -9,7 +9,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 - 스택: React, TypeScript, Tailwind CSS, Vite
 - 라우팅: react-router-dom
 - 데이터베이스: 프론트엔드 직접 사용 없음
-- 인증 사용: Google ID token 기반 백엔드 로그인, signup, logout, session role 연동
+- 인증 사용: Google ID token 기반 백엔드 로그인, signup, token refresh, logout, session role 연동
 - 문제/제출 사용: authenticated backend API 연동
 - 관리자 문제 생성: `ADMIN` role 세션에만 화면 노출, admin-only backend API 연동
 - 외부 API 연동: Google Identity Services script, kpsc-oj-backend auth API
@@ -40,7 +40,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 - 제출 데이터 흐름: Page -> Hook -> Submission service -> Backend API. 제출 생성 후 상세 결과는 `useSubmissionDetail`이 조회하고 진행 중 상태에서는 polling한다.
 - 인증 흐름: Google Identity Services 버튼 -> LoginPage -> Auth store -> Auth service -> Backend auth API -> 기존 사용자 세션 저장 또는 최초 로그인 회원가입 대기 -> signup 완료 후 세션 저장
 - API 흐름: Page -> Hook/Store -> Service -> Backend API
-- 저장 흐름: Auth session은 localStorage에 저장하고 access token 만료 시 제거한다.
+- 저장 흐름: Auth session은 localStorage에 저장하고 access token 만료 전 또는 인증 401 응답 시 refresh token으로 갱신한다. refresh 실패가 인증 실패이면 저장된 세션을 제거한다.
 - 외부 연동 흐름: Google Identity Services script는 LoginPage의 GoogleIdentityButton 경계에서만 사용한다.
 
 ## 라우트
@@ -73,3 +73,4 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | 2026-05-09 | 관리자 문제 생성 화면은 auth session role이 `ADMIN`일 때만 노출한다. | 일반 사용자는 문제 생성창 자체를 볼 수 없어야 한다는 요구사항을 반영하기 위함. | Header, AppLayout, ProblemsPage의 출제 진입점을 숨기고 `/admin/problems/new` 직접 접근도 `/problems`로 돌려보낸다. |
 | 2026-05-09 | 문제 생성 요청에 선택 `checkerCode`를 추가한다. | 문제별 C++17 checker를 선택적으로 등록할 수 있어야 한다. | 관리자 문제 생성 폼에 checker 입력을 추가하고 공백이면 요청 body에서 생략한다. |
 | 2026-05-09 | 제출 생성 후 제출 상세 API를 polling한다. | 백엔드가 제출을 `QUEUED`로 저장한 뒤 비동기로 채점하기 때문이다. | `SubmitPage`는 제출 생성 직후 `GET /api/v1/submissions/{submissionId}`를 조회하고 진행 중 상태에서는 2.5초 간격으로 결과를 갱신한다. |
+| 2026-05-09 | 보호 API 호출 전에 auth store가 access token을 갱신한다. | access token TTL이 15분이라 사용 중 세션 만료가 빈번하게 발생할 수 있기 때문이다. | Hook은 `requestWithFreshSession()`으로 service를 호출하고, `AuthProvider`는 `POST /api/v1/auth/refresh` rotation 결과를 localStorage에 저장한다. |

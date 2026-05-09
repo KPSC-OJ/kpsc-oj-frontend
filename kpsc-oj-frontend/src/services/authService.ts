@@ -8,6 +8,7 @@ import type {
   GoogleAuthRequestDto,
   GoogleAuthResponseDto,
   LogoutResponseDto,
+  RefreshRequestDto,
   SignupRequestDto,
 } from '../types/auth'
 
@@ -17,6 +18,14 @@ function createAuthSession(tokens: AuthTokenSet): AuthSession {
     expiresAtEpochMs: Date.now() + tokens.expiresInSeconds * 1000,
     role: resolveAuthUserRole(tokens),
   }
+}
+
+function mapAuthTokenSetResponse(value: unknown, message: string): AuthTokenSet {
+  if (!isAuthTokenSet(value)) {
+    throw createInvalidAuthResponseError(message)
+  }
+
+  return value
 }
 
 function createInvalidAuthResponseError(message: string): AuthApiError {
@@ -142,13 +151,14 @@ function mapGoogleAuthResponse(response: GoogleAuthResponseDto): AuthLoginResult
     }
   }
 
-  if (!isAuthTokenSet(response.tokens)) {
-    throw createInvalidAuthResponseError('로그인 토큰 응답이 올바르지 않습니다.')
-  }
+  const tokens = mapAuthTokenSetResponse(
+    response.tokens,
+    '로그인 토큰 응답이 올바르지 않습니다.',
+  )
 
   return {
     kind: 'authenticated',
-    session: createAuthSession(response.tokens),
+    session: createAuthSession(tokens),
   }
 }
 
@@ -168,11 +178,24 @@ export async function completeFirstLoginSignup(
   signupToken: string,
   serviceUsername: string,
 ): Promise<AuthSession> {
-  const tokens = await requestJson<AuthTokenSet>({
+  const response = await requestJson<unknown>({
     body: { serviceUsername, signupToken } satisfies SignupRequestDto,
     method: 'POST',
     path: '/api/v1/auth/signup',
   })
+  const tokens = mapAuthTokenSetResponse(response, '회원가입 토큰 응답이 올바르지 않습니다.')
+
+  return createAuthSession(tokens)
+}
+
+/** refresh token rotation으로 새 서비스 세션을 발급받는다. */
+export async function refreshAuthSession(refreshToken: string): Promise<AuthSession> {
+  const response = await requestJson<unknown>({
+    body: { refreshToken } satisfies RefreshRequestDto,
+    method: 'POST',
+    path: '/api/v1/auth/refresh',
+  })
+  const tokens = mapAuthTokenSetResponse(response, '토큰 갱신 응답이 올바르지 않습니다.')
 
   return createAuthSession(tokens)
 }

@@ -21,19 +21,21 @@ export function useCreateSubmission(): {
     requestDto: CreateSubmissionRequestDto,
   ) => Promise<CreateSubmissionResponseDto>
 } {
-  const { session } = useAuth()
+  const { isAuthenticated, requestWithFreshSession } = useAuth()
 
   const createSubmissionWithCurrentSession = useCallback(
     async (
       requestDto: CreateSubmissionRequestDto,
     ): Promise<CreateSubmissionResponseDto> => {
-      if (!session) {
+      if (!isAuthenticated) {
         throw createMissingSessionError()
       }
 
-      return createSubmission(session.accessToken, requestDto)
+      return requestWithFreshSession((accessToken) =>
+        createSubmission(accessToken, requestDto),
+      )
     },
-    [session],
+    [isAuthenticated, requestWithFreshSession],
   )
 
   return { createSubmissionWithCurrentSession }

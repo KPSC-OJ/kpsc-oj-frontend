@@ -21,17 +21,19 @@ export function useCreateProblem(): {
     requestDto: CreateProblemRequestDto,
   ) => Promise<CreateProblemResponseDto>
 } {
-  const { session } = useAuth()
+  const { isAuthenticated, requestWithFreshSession } = useAuth()
 
   const createProblemWithCurrentSession = useCallback(
     async (requestDto: CreateProblemRequestDto): Promise<CreateProblemResponseDto> => {
-      if (!session) {
+      if (!isAuthenticated) {
         throw createMissingSessionError()
       }
 
-      return createProblem(session.accessToken, requestDto)
+      return requestWithFreshSession((accessToken) =>
+        createProblem(accessToken, requestDto),
+      )
     },
-    [session],
+    [isAuthenticated, requestWithFreshSession],
   )
 
   return { createProblemWithCurrentSession }

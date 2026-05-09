@@ -10,7 +10,9 @@
 - Access token TTL: 15분.
 - Refresh token TTL: 14일.
 - Signup token TTL: 10분.
-- Refresh token 재발급 endpoint는 아직 정의되지 않아 프론트엔드에서 자동 refresh를 수행하지 않는다.
+- Access token 만료 60초 전부터 프론트엔드는 `POST /api/v1/auth/refresh`로 access token과 refresh token을 갱신한다.
+- 보호 API가 401 또는 `AUTHENTICATION_FAILED`를 반환하면 프론트엔드는 refresh token으로 한 번 갱신한 뒤 원래 요청을 한 번 재시도한다.
+- Refresh는 refresh token rotation을 사용하므로 성공 응답의 새 refresh token을 즉시 localStorage session에 저장한다.
 - Auth role 값은 `USER`, `ADMIN`이다. 프론트엔드는 화면 표시용으로 token 응답의 optional role 또는 access token payload의 `role`, `roles`, `authority`, `authorities`, `scope` claim에서 `ADMIN` 권한을 정규화한다. 확인 가능한 `ADMIN` 권한이 없으면 `USER`로 처리한다.
 - API base URL: `VITE_API_BASE_URL` 환경 변수를 우선 사용하고, 없으면 `http://localhost:8000`을 사용한다.
 - Google Identity Services client id: `VITE_GOOGLE_CLIENT_ID`가 있으면 Google 버튼을 렌더링한다. 없으면 사용자에게 로그인 준비 중 상태를 표시한다.
@@ -81,6 +83,27 @@
   - `FORBIDDEN_EMAIL_DOMAIN`: signup token의 email domain이 허용되지 않음.
   - `ACCOUNT_ALREADY_EXISTS`: 해당 email 계정이 이미 등록됨.
   - `DUPLICATE_SERVICE_USERNAME`: 서비스 아이디가 이미 사용 중임.
+
+### POST /api/v1/auth/refresh
+- 설명: refresh token으로 현재 로그인 session의 access token과 refresh token을 재발급한다.
+- 인증: public. 단, 유효한 refresh token 필요. `Authorization` header는 사용하지 않는다.
+- Path params: 없음.
+- Query params: 없음.
+- Request body:
+  - `refreshToken`: string, required, 기존 로그인 또는 직전 refresh 응답에서 발급된 refresh JWT.
+- Response body:
+  - `accessToken`: string, required, 새 서비스 access JWT.
+  - `refreshToken`: string, required, 새 서비스 refresh JWT. 기존 refresh token은 rotation으로 즉시 무효화된다.
+  - `tokenType`: string, required, 값은 `Bearer`.
+  - `expiresInSeconds`: number, required, 새 access token 만료까지 남은 초.
+  - `serviceUsername`: string, required, session 소유 계정의 서비스 아이디.
+- Status codes:
+  - 200: token 재발급 완료.
+  - 400: 요청 field 형식 오류.
+  - 401: refresh token 검증 실패, 만료, 폐기된 session, 이미 rotation된 refresh token, 또는 session 불일치.
+- Error cases:
+  - `INVALID_REQUEST`: `refreshToken` 누락.
+  - `AUTHENTICATION_FAILED`: refresh token이 유효하지 않거나 session이 active 상태가 아님.
 
 ### POST /api/v1/auth/logout
 - 설명: 현재 access token의 session을 폐기한다.
@@ -241,7 +264,7 @@
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
 
 ### GET /api/v1/submissions/{submissionId}
-- 설명: 제출 UUID를 기준으로 제출 상세 정보를 조회한다. 제출자 본인 또는 관리자만 조회할 수 있으며, 상세 응답에는 제출 소스 코드와 채점 결과가 포함된다.
+- 설명: 제출 UUID를 기준으로 제출 상세 정보를 조회한다. 제출자 본인 또는 관리자만 조회할 수 있으며, 상세 응답에는 제출 소스 코드와 채점 요약이 포함된다.
 - 인증: authenticated.
 - Path params:
   - `submissionId`: string, required, 제출 UUID.
@@ -252,15 +275,10 @@
   - `problemNumber`: number, required, 제출 대상 문제 번호.
   - `language`: string, required, 제출 언어. 값은 `cpp17` 또는 `python3`.
   - `status`: string, required, 제출 상태 enum.
-  - `scorePercentage`: number, optional, 채점 점수 percentage. 채점 전이면 null.
+  - `scorePercentage`: number, optional, 통과한 테스트 비율 percentage. 채점 전이면 null. 테스트 케이스 개수와 통과 개수는 노출하지 않음.
   - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각.
   - `sourceCode`: string, required, 제출한 전체 소스 코드. 제출자 본인 또는 관리자에게만 반환.
-  - `testCaseResults`: array, required, 테스트 케이스별 결과 목록. 채점 전 또는 컴파일 실패처럼 테스트 케이스가 실행되지 않은 경우 빈 배열.
-  - `testCaseResults[].order`: number, required, 테스트 케이스 순서. 1부터 시작.
-  - `testCaseResults[].status`: string, required, 테스트 케이스 결과 상태. 값은 `PASSED`, `WRONG_ANSWER`, `RUNTIME_ERROR`, `TIME_LIMIT_EXCEEDED`, `MEMORY_LIMIT_EXCEEDED`.
-  - `testCaseResults[].executionTimeMillis`: number, optional, 실행 시간 ms. judge가 테스트 케이스별 실행 시간을 제공하지 않으면 null.
-  - `testCaseResults[].memoryUsageKilobytes`: number, optional, 메모리 사용량 KB. judge가 테스트 케이스별 메모리 사용량을 제공하지 않으면 null.
-  - `testCaseResults[].message`: string, optional, 실패 또는 진단 메시지. 없으면 null.
+  - 테스트 케이스별 결과, 테스트 케이스 개수, 통과 개수, 실패 케이스 순서와 종류는 응답에 포함하지 않음.
   - `compileErrorMessage`: string, optional, 컴파일 오류 메시지. `status=COMPILE_ERROR`일 때 사용하며 없으면 null.
   - `runtimeErrorMessage`: string, optional, 런타임 오류 메시지. `status=RUNTIME_ERROR`일 때 사용하며 없으면 null.
 - Status codes:
@@ -276,7 +294,7 @@
   - `SUBMISSION_NOT_FOUND`: 해당 제출이 존재하지 않음.
 
 ## 외부 API 매핑
-- `src/services/authService.ts`는 백엔드 `POST /api/v1/auth/google`, `POST /api/v1/auth/signup`, `POST /api/v1/auth/logout`을 호출한다.
+- `src/services/authService.ts`는 백엔드 `POST /api/v1/auth/google`, `POST /api/v1/auth/signup`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`을 호출한다.
 - `src/services/problemService.ts`는 백엔드 `GET /api/v1/problems`, `GET /api/v1/problems/{problemNumber}`, `POST /api/v1/problems`를 호출한다.
 - `src/services/submissionService.ts`는 백엔드 `POST /api/v1/submissions`, `GET /api/v1/submissions/me`, `GET /api/v1/submissions/{submissionId}`를 호출한다.
 - 제출 생성 후 `useSubmissionDetail`은 `GET /api/v1/submissions/{submissionId}`를 호출하고 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` 상태에서는 2.5초 간격으로 다시 조회한다.
@@ -284,5 +302,6 @@
 - 문제 생성 화면은 `checkerCode` 입력이 공백뿐이면 요청 body에서 생략한다.
 - `POST /api/v1/auth/google` 응답의 `requiresSignup=false`는 `AuthSession`, `requiresSignup=true`는 pending signup state로 정규화한다.
 - `POST /api/v1/auth/signup` 응답 token set은 즉시 `AuthSession`으로 변환하며, 이 시점에 로그인 완료 상태가 된다.
+- `POST /api/v1/auth/refresh` 응답 token set은 즉시 기존 `AuthSession`을 대체하며, 동시 보호 API 요청은 하나의 refresh 요청 결과를 공유한다.
 - Google Identity Services 버튼은 `VITE_GOOGLE_CLIENT_ID`가 있을 때 `https://accounts.google.com/gsi/client`를 로드하고 credential callback의 ID token을 `POST /api/v1/auth/google`로 전달한다.
 - Google SDK load 실패, client id 미설정, backend error는 LoginPage에서 사용자 오류 상태로 표시한다.

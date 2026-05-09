@@ -42,14 +42,19 @@
 | --- | --- | --- | --- | --- |
 | none | `QUEUED` | 사용자가 `POST /api/v1/submissions`로 제출 생성 | Backend service | 생성된 제출 ID와 제출 시각을 화면에 표시한다. |
 | `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` | terminal status | 백엔드 비동기 채점 완료 후 상세 조회 | Backend processor | `useSubmissionDetail`이 2.5초 간격으로 상세 조회를 반복해 결과를 갱신한다. |
+| persisted auth session | refreshed auth session | access token 만료 60초 전 또는 보호 API 401 응답 | `POST /api/v1/auth/refresh` | 새 access token, refresh token, 만료 시각을 localStorage에 저장한다. |
+| persisted auth session | none | refresh token 검증 실패, 만료, 폐기된 session, rotation 불일치 | Backend auth API | localStorage auth session을 제거하고 로그인 화면으로 돌아갈 수 있게 한다. |
 
 ## 인증 상태
 - Auth session은 `kpsc_oj_auth_session` localStorage key에 저장한다.
 - 저장 필드: `accessToken`, `refreshToken`, `tokenType`, `expiresInSeconds`, `expiresAtEpochMs`, `serviceUsername`, `role`.
-- access token 만료 시 저장된 session을 제거한다.
+- 저장된 session으로 앱을 시작했을 때 access token이 이미 refresh 기준 시각을 지났으면 `AuthProvider`가 `POST /api/v1/auth/refresh`를 한 번 시도한다.
+- access token 만료 60초 전부터 보호 API 호출은 `POST /api/v1/auth/refresh`로 새 access token과 refresh token을 먼저 발급받는다.
+- 보호 API가 401 또는 `AUTHENTICATION_FAILED`를 반환하면 refresh token으로 한 번 갱신한 뒤 원래 요청을 한 번 재시도한다.
+- 여러 보호 API 호출이 동시에 refresh를 필요로 하면 `AuthProvider`는 하나의 refresh 요청만 수행하고 그 결과를 공유한다.
+- refresh가 400/401 또는 `INVALID_REQUEST`/`AUTHENTICATION_FAILED`로 실패하면 저장된 session을 제거한다.
 - access token payload의 `role`, `roles`, `authority`, `authorities`, `scope` claim에서 `ADMIN` 권한을 우선 정규화한다. claim에 role이 없으면 인증 응답 또는 기존 localStorage session의 role을 사용하고, 그래도 없으면 `USER`로 정규화한다.
 - `ADMIN`이 아닌 session은 문제 생성 nav와 `/admin/problems/new` 화면을 볼 수 없다.
 - `POST /api/v1/auth/google` 응답이 `requiresSignup=true`이면 기존 local session을 제거하고 pending signup state만 유지한다.
 - `POST /api/v1/auth/signup` 성공 응답의 token set을 `AuthSession`으로 변환하면 로그인 완료 상태가 된다.
-- refresh token 재발급 endpoint가 아직 정의되지 않았으므로 자동 refresh는 수행하지 않는다.
 - logout은 local session을 먼저 제거하고 `POST /api/v1/auth/logout`으로 백엔드 session 폐기를 요청한다.

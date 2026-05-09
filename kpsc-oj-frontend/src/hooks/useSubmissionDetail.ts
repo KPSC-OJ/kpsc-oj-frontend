@@ -21,13 +21,6 @@ function mapSubmissionDetailResponse(
     sourceCode: responseDto.sourceCode,
     status: responseDto.status,
     submittedAt: responseDto.submittedAt,
-    testCaseResults: responseDto.testCaseResults.map((testCaseResultDto) => ({
-      executionTimeMillis: testCaseResultDto.executionTimeMillis ?? null,
-      memoryUsageKilobytes: testCaseResultDto.memoryUsageKilobytes ?? null,
-      message: testCaseResultDto.message ?? null,
-      order: testCaseResultDto.order,
-      status: testCaseResultDto.status,
-    })),
   }
 }
 
@@ -64,20 +57,18 @@ export function useSubmissionDetail(submissionId: string | null): {
   isPolling: boolean
   submissionDetail: SubmissionDetail | null
 } {
-  const { session } = useAuth()
+  const { isAuthenticated, requestWithFreshSession } = useAuth()
   const [submissionDetail, setSubmissionDetail] = useState<SubmissionDetail | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    const accessToken = session?.accessToken
     const currentSubmissionId = submissionId
 
-    if (!accessToken || !currentSubmissionId) {
+    if (!isAuthenticated || !currentSubmissionId) {
       return
     }
 
-    const currentAccessToken = accessToken
     const currentDetailSubmissionId = currentSubmissionId
     let isActive = true
     let pollingTimeoutId: ReturnType<typeof setTimeout> | null = null
@@ -90,9 +81,8 @@ export function useSubmissionDetail(submissionId: string | null): {
       setErrorMessage(null)
 
       try {
-        const responseDto = await getSubmissionDetail(
-          currentAccessToken,
-          currentDetailSubmissionId,
+        const responseDto = await requestWithFreshSession((accessToken) =>
+          getSubmissionDetail(accessToken, currentDetailSubmissionId),
         )
         const nextSubmissionDetail = mapSubmissionDetailResponse(responseDto)
 
@@ -127,7 +117,7 @@ export function useSubmissionDetail(submissionId: string | null): {
         clearTimeout(pollingTimeoutId)
       }
     }
-  }, [session?.accessToken, submissionId])
+  }, [isAuthenticated, requestWithFreshSession, submissionId])
 
   const visibleSubmissionDetail =
     submissionDetail?.id === submissionId ? submissionDetail : null

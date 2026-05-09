@@ -6,7 +6,7 @@
 - Actor: 일반 사용자
 - Entry point: `/problems`
 - Preconditions: 로그인 세션이 있어야 한다.
-- Steps: `ProtectedRoute`가 로그인 세션을 확인한다. `ProblemsPage`가 `useProblemList(page)`를 호출하고 hook이 `problemService.listProblems()`를 통해 `GET /api/v1/problems?page={page}`를 요청한다. hook은 API DTO를 `ProblemPage` view model로 변환하고 `ProblemTable`에 전달한다.
+- Steps: `ProtectedRoute`가 로그인 세션을 확인한다. `ProblemsPage`가 `useProblemList(page)`를 호출하고 hook이 `requestWithFreshSession()`으로 유효한 access token을 확보한 뒤 `problemService.listProblems()`를 통해 `GET /api/v1/problems?page={page}`를 요청한다. hook은 API DTO를 `ProblemPage` view model로 변환하고 `ProblemTable`에 전달한다.
 - Validation: page는 1 이상의 정수 상태로 관리한다. 백엔드가 page query parameter를 최종 검증한다.
 - Empty state: 조회된 문제가 없으면 빈 목록 안내를 표시한다.
 - Error state: 401이면 재로그인 안내, 그 외 API 오류는 정규화된 메시지를 표시한다.
@@ -58,11 +58,25 @@
 - Related API: `POST /api/v1/auth/logout`
 - Related DB tables: 백엔드 auth_sessions table
 
+## 토큰 갱신
+- Actor: 로그인 사용자
+- Entry point: 모든 보호 API 호출 hook
+- Preconditions: localStorage 또는 auth store에 refresh token이 있는 인증 세션이 있어야 한다.
+- Steps: 앱 시작 시 저장된 session의 access token이 이미 refresh 기준 시각을 지났으면 `AuthProvider`가 `authService.refreshAuthSession()`으로 `POST /api/v1/auth/refresh`를 한 번 시도한다. 보호 API 호출 hook은 service를 직접 호출하기 전에 `requestWithFreshSession()`을 호출한다. auth store는 access token 만료까지 60초 미만이면 같은 refresh API를 요청한다. 성공하면 새 access token과 refresh token을 `AuthSession`으로 변환해 localStorage와 React state를 갱신한 뒤 원래 service 호출을 계속한다. 보호 API가 401 또는 `AUTHENTICATION_FAILED`를 반환하면 auth store가 refresh를 한 번 강제로 수행하고 원래 요청을 한 번 재시도한다.
+- Validation: refresh token 유효성, session active 여부, rotation 일치 여부는 백엔드가 최종 검증한다.
+- Empty state: 저장된 session이 없으면 로그인 필요 오류를 반환한다.
+- Error state: refresh가 400/401 또는 `INVALID_REQUEST`/`AUTHENTICATION_FAILED`로 실패하면 auth store가 local session을 제거한다. 네트워크 오류나 5xx는 session을 보존하고 호출자에게 오류를 전달한다.
+- Permission behavior: public with refresh token
+- Retry or recovery: 사용자는 다시 로그인할 수 있다. 동시 보호 API 호출은 하나의 refresh 요청 결과를 공유한다.
+- Side effects: refresh 성공 시 기존 refresh token은 rotation으로 폐기되고 새 token set이 localStorage에 저장된다.
+- Related API: `POST /api/v1/auth/refresh`
+- Related DB tables: 백엔드 auth_sessions table
+
 ## 제출 작업 화면
 - Actor: 일반 사용자
 - Entry point: `/problems/:id/submit`
 - Preconditions: 로그인 세션이 있어야 하고 URL에 문제 번호가 포함되어야 한다.
-- Steps: `SubmitPage`가 `useProblemDetail(problemNumber)`로 `GET /api/v1/problems/{problemNumber}`를 호출해 문제 본문과 공개 예제를 표시한다. 같은 화면에서 `useMySubmissions(1, problemNumber)`로 해당 문제의 내 최근 제출을 조회한다. 사용자가 제출하면 `useCreateSubmission()`이 `POST /api/v1/submissions`를 호출한다. 생성된 제출 ID가 있으면 `useSubmissionDetail(submissionId)`가 `GET /api/v1/submissions/{submissionId}`를 호출해 채점 상태, 점수, 테스트 케이스 결과, 컴파일/런타임 오류 메시지를 조회한다. 제출 상태가 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING`이면 2.5초 후 상세 조회를 반복한다.
+- Steps: `SubmitPage`가 `useProblemDetail(problemNumber)`로 `GET /api/v1/problems/{problemNumber}`를 호출해 문제 본문과 공개 예제를 표시한다. 같은 화면에서 `useMySubmissions(1, problemNumber)`로 해당 문제의 내 최근 제출을 조회한다. 사용자가 제출하면 `useCreateSubmission()`이 `POST /api/v1/submissions`를 호출한다. 생성된 제출 ID가 있으면 `useSubmissionDetail(submissionId)`가 `GET /api/v1/submissions/{submissionId}`를 호출해 채점 상태, 점수, 컴파일/런타임 오류 메시지를 조회한다. 각 보호 API 호출 전에는 `requestWithFreshSession()`이 access token 갱신을 처리한다. 제출 상태가 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING`이면 2.5초 후 상세 조회를 반복한다.
 - Validation: 프론트엔드는 문제 번호가 양의 정수인지, 소스 코드가 비어 있지 않은지 확인한다. 지원 언어와 문제 존재 여부는 백엔드가 최종 검증한다.
 - Empty state: 최근 제출이 없으면 제출 기록 없음 안내를 표시한다.
 - Error state: 문제 조회 404, 제출 400/401/404, 미지원 언어 오류, 제출 상세 403/404 오류를 화면에 표시한다.
@@ -76,7 +90,7 @@
 - Actor: 일반 사용자
 - Entry point: `/submissions`
 - Preconditions: 로그인 세션이 있어야 한다.
-- Steps: `SubmissionsPage`가 `useMySubmissions(page)`를 호출하고 hook이 `submissionService.listMySubmissions()`로 `GET /api/v1/submissions/me`를 요청한다. API DTO는 `SubmissionPage` view model로 변환되어 테이블에 표시된다.
+- Steps: `SubmissionsPage`가 `useMySubmissions(page)`를 호출하고 hook이 `requestWithFreshSession()`으로 유효한 access token을 확보한 뒤 `submissionService.listMySubmissions()`로 `GET /api/v1/submissions/me`를 요청한다. API DTO는 `SubmissionPage` view model로 변환되어 테이블에 표시된다.
 - Validation: page는 1 이상의 정수 상태로 관리한다. 백엔드가 page query parameter를 최종 검증한다.
 - Empty state: 제출 기록이 없으면 빈 목록 안내를 표시한다.
 - Error state: 401이면 재로그인 안내, 그 외 API 오류는 정규화된 메시지를 표시한다.
@@ -104,7 +118,7 @@
 - Actor: 관리자
 - Entry point: `/admin/problems/new`
 - Preconditions: 로그인 세션이 있어야 하며 auth session role이 `ADMIN`이어야 한다. 백엔드 기준 관리자 권한이 필요하다.
-- Steps: 비로그인 사용자가 접근하면 `ProtectedRoute`가 `/login`으로 이동시킨다. 로그인했지만 `ADMIN`이 아닌 사용자는 `ProtectedRoute requiredRole=ADMIN`이 `/problems`로 이동시켜 문제 생성 화면을 조립하지 않는다. 관리자는 `AdminProblemNewPage`에서 제목, 태그, 시간 제한, 메모리 제한, Markdown 본문, 선택 checker C++ 코드, 공개 예제 테스트 케이스, 실제 채점 테스트 케이스를 입력한다. 제출 시 page가 request DTO를 만들고 `useCreateProblem()`이 현재 access token으로 `problemService.createProblem()`을 호출해 `POST /api/v1/problems`를 요청한다.
+- Steps: 비로그인 사용자가 접근하면 `ProtectedRoute`가 `/login`으로 이동시킨다. 로그인했지만 `ADMIN`이 아닌 사용자는 `ProtectedRoute requiredRole=ADMIN`이 `/problems`로 이동시켜 문제 생성 화면을 조립하지 않는다. 관리자는 `AdminProblemNewPage`에서 제목, 태그, 시간 제한, 메모리 제한, Markdown 본문, 선택 checker C++ 코드, 공개 예제 테스트 케이스, 실제 채점 테스트 케이스를 입력한다. 제출 시 page가 request DTO를 만들고 `useCreateProblem()`이 `requestWithFreshSession()`으로 유효한 access token을 확보한 뒤 `problemService.createProblem()`을 호출해 `POST /api/v1/problems`를 요청한다.
 - Validation: 프론트엔드는 제목 필수/20자 이하, 태그 필수/64자 이하, 시간/메모리 양의 정수, 본문 필수, 예제/실제 테스트 케이스 최소 1개를 확인한다. checker 코드가 공백이면 `checkerCode`를 요청 body에서 생략한다. checker 코드 형식, 입출력 배열 개수 일치, 관리자 권한은 백엔드가 최종 검증한다.
 - Empty state: 빈 폼
 - Error state: 401이면 재로그인 안내, 403이면 문제 생성 권한 없음, 400이면 백엔드 검증 오류 메시지를 표시한다.

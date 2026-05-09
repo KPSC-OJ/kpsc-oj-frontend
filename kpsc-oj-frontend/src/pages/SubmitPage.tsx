@@ -10,7 +10,7 @@ import { useMySubmissions } from '../hooks/useMySubmissions'
 import { useProblemDetail } from '../hooks/useProblemDetail'
 import { useSubmissionDetail } from '../hooks/useSubmissionDetail'
 import type { AuthApiError } from '../types/auth'
-import type { SubmissionDetail, SubmissionTestCaseResult } from '../types/submission'
+import type { SubmissionDetail } from '../types/submission'
 import type {
   CreateSubmissionResponseDto,
   SubmissionLanguageDto,
@@ -83,20 +83,6 @@ function formatScorePercentage(scorePercentage: number | null): string {
 
 function getSubmissionDiagnosticMessage(submissionDetail: SubmissionDetail): string | null {
   return submissionDetail.compileErrorMessage ?? submissionDetail.runtimeErrorMessage
-}
-
-function formatTestCaseResource(testCaseResult: SubmissionTestCaseResult): string {
-  const resourceParts = []
-
-  if (testCaseResult.executionTimeMillis !== null) {
-    resourceParts.push(`${testCaseResult.executionTimeMillis}ms`)
-  }
-
-  if (testCaseResult.memoryUsageKilobytes !== null) {
-    resourceParts.push(`${testCaseResult.memoryUsageKilobytes}KB`)
-  }
-
-  return resourceParts.length > 0 ? resourceParts.join(' · ') : '리소스 기록 없음'
 }
 
 export function SubmitPage() {
@@ -331,37 +317,11 @@ export function SubmitPage() {
                   </pre>
                 ) : null}
 
-                {submissionDetail.testCaseResults.length > 0 ? (
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {submissionDetail.testCaseResults.map((testCaseResult) => (
-                      <div
-                        className="rounded-md border border-slate-200 bg-slate-50 p-3"
-                        key={testCaseResult.order}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-black text-slate-500">
-                            Case {testCaseResult.order}
-                          </span>
-                          <SubmissionStatusBadge status={testCaseResult.status} />
-                        </div>
-                        <p className="mt-2 text-xs font-semibold text-slate-500">
-                          {formatTestCaseResource(testCaseResult)}
-                        </p>
-                        {testCaseResult.message ? (
-                          <p className="mt-2 whitespace-pre-wrap text-xs text-slate-600">
-                            {testCaseResult.message}
-                          </p>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
+                {isPolling ? (
                   <p className="text-xs font-semibold text-slate-500">
-                    {isPolling
-                      ? '테스트 케이스 결과를 기다리는 중입니다.'
-                      : '표시할 테스트 케이스 결과가 없습니다.'}
+                    채점 결과를 기다리는 중입니다.
                   </p>
-                )}
+                ) : null}
               </div>
             ) : null}
 

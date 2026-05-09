@@ -17,14 +17,6 @@ export type SubmissionPage = {
   submissions: SubmissionSummary[]
 }
 
-export type SubmissionTestCaseResult = {
-  order: number
-  status: string
-  executionTimeMillis: number | null
-  memoryUsageKilobytes: number | null
-  message: string | null
-}
-
 export type SubmissionDetail = {
   id: string
   problemNumber: number
@@ -33,7 +25,6 @@ export type SubmissionDetail = {
   scorePercentage: number | null
   submittedAt: string
   sourceCode: string
-  testCaseResults: SubmissionTestCaseResult[]
   compileErrorMessage: string | null
   runtimeErrorMessage: string | null
 }

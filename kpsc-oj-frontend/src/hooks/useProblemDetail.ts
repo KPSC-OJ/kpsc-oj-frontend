@@ -45,7 +45,7 @@ export function useProblemDetail(problemNumber: number | null): {
   isLoading: boolean
   problem: ProblemDetail | null
 } {
-  const { session } = useAuth()
+  const { isAuthenticated, requestWithFreshSession } = useAuth()
   const [problem, setProblem] = useState<ProblemDetail | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -54,7 +54,7 @@ export function useProblemDetail(problemNumber: number | null): {
     let isActive = true
 
     async function loadProblem(): Promise<void> {
-      if (!session || problemNumber === null) {
+      if (!isAuthenticated || problemNumber === null) {
         setIsLoading(false)
         setProblem(null)
         setErrorMessage('문제 번호가 올바르지 않습니다.')
@@ -66,7 +66,9 @@ export function useProblemDetail(problemNumber: number | null): {
       setErrorMessage(null)
 
       try {
-        const responseDto = await getProblemDetail(session.accessToken, problemNumber)
+        const responseDto = await requestWithFreshSession((accessToken) =>
+          getProblemDetail(accessToken, problemNumber),
+        )
 
         if (isActive) {
           setProblem(mapProblemDetailResponse(responseDto))
@@ -88,7 +90,7 @@ export function useProblemDetail(problemNumber: number | null): {
     return () => {
       isActive = false
     }
-  }, [problemNumber, session])
+  }, [isAuthenticated, problemNumber, requestWithFreshSession])
 
   return { errorMessage, isLoading, problem }
 }

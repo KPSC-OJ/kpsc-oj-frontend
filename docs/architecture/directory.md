@@ -27,16 +27,16 @@
 | `kpsc-oj-frontend/src/components/problem` | directory | 문제 도메인 표시 컴포넌트 | Feature UI | `ProblemTable`을 포함한다. |
 | `kpsc-oj-frontend/src/components/submission` | directory | 제출 도메인 표시 컴포넌트 | Feature UI | `SubmissionStatusBadge`를 포함한다. |
 | `kpsc-oj-frontend/src/hooks` | directory | 화면 유스케이스 hook | Application hook | API service와 page 사이의 비동기 흐름을 캡슐화한다. |
-| `kpsc-oj-frontend/src/hooks/useCreateProblem.ts` | file | 문제 생성 hook | Application hook | 현재 auth session으로 문제 생성 service를 호출한다. |
+| `kpsc-oj-frontend/src/hooks/useCreateProblem.ts` | file | 문제 생성 hook | Application hook | auth store가 갱신한 access token으로 문제 생성 service를 호출한다. |
 | `kpsc-oj-frontend/src/hooks/useProblemList.ts` | file | 문제 목록 hook | Application hook | 문제 목록 API 응답을 UI 모델로 변환한다. |
 | `kpsc-oj-frontend/src/hooks/useProblemDetail.ts` | file | 문제 상세 hook | Application hook | 문제 상세 API 응답을 제출 화면 모델로 변환한다. |
-| `kpsc-oj-frontend/src/hooks/useCreateSubmission.ts` | file | 제출 생성 hook | Application hook | 현재 auth session으로 제출 생성 service를 호출한다. |
+| `kpsc-oj-frontend/src/hooks/useCreateSubmission.ts` | file | 제출 생성 hook | Application hook | auth store가 갱신한 access token으로 제출 생성 service를 호출한다. |
 | `kpsc-oj-frontend/src/hooks/useMySubmissions.ts` | file | 내 제출 목록 hook | Application hook | 내 제출 목록 API 응답을 UI 모델로 변환한다. |
 | `kpsc-oj-frontend/src/hooks/useSubmissionDetail.ts` | file | 제출 상세 hook | Application hook | 제출 상세 API 응답을 UI 모델로 변환하고 진행 중 상태를 polling한다. |
-| `kpsc-oj-frontend/src/services` | directory | 백엔드 API client와 service | Service/API boundary | auth API 호출과 공통 JSON/error 처리를 담당한다. |
+| `kpsc-oj-frontend/src/services` | directory | 백엔드 API client와 service | Service/API boundary | auth API 호출, token refresh API 호출, 공통 JSON/error 처리를 담당한다. |
 | `kpsc-oj-frontend/src/services/problemService.ts` | file | 문제 API service | Service/API boundary | 문제 목록/상세 조회와 문제 생성 API 호출을 담당한다. |
 | `kpsc-oj-frontend/src/services/submissionService.ts` | file | 제출 API service | Service/API boundary | 제출 생성, 내 제출 목록 조회, 제출 상세 조회 API 호출을 담당한다. |
-| `kpsc-oj-frontend/src/stores` | directory | 전역 UI/application state | Store | AuthProvider, auth context, useAuth hook, session role 정규화를 포함한다. |
+| `kpsc-oj-frontend/src/stores` | directory | 전역 UI/application state | Store | AuthProvider, auth context, useAuth hook, session role 정규화, access token 갱신 흐름을 포함한다. |
 | `kpsc-oj-frontend/src/types` | directory | API DTO와 UI-facing 타입 정의 | Type contract | API DTO와 화면 모델을 분리한다. |
 | `kpsc-oj-frontend/src/types/problemApi.ts` | file | 문제 API DTO 타입 | API DTO contract | 문제 목록/상세/생성 request/response DTO와 optional checker field를 정의한다. |
 | `kpsc-oj-frontend/src/types/submissionApi.ts` | file | 제출 API DTO 타입 | API DTO contract | 제출 생성/목록/상세 request/response DTO를 정의한다. |

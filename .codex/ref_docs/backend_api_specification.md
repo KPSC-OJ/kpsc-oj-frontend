@@ -283,15 +283,10 @@
   - `problemNumber`: number, required, 제출 대상 문제 번호.
   - `language`: string, required, 제출 언어. 값은 `cpp17` 또는 `python3`.
   - `status`: string, required, 제출 상태 enum.
-  - `scorePercentage`: number, optional, 채점 점수 percentage. 채점 전이면 null.
+  - `scorePercentage`: number, optional, 통과한 테스트 비율 percentage. 채점 전이면 null. 테스트 케이스 개수와 통과 개수는 노출하지 않는다.
   - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각.
   - `sourceCode`: string, required, 제출한 전체 소스 코드. 제출자 본인 또는 관리자에게만 반환.
-  - `testCaseResults`: array, required, 테스트 케이스별 결과 목록. 채점 전 또는 컴파일 실패처럼 테스트 케이스가 실행되지 않은 경우 빈 배열.
-  - `testCaseResults[].order`: number, required, 테스트 케이스 순서. 1부터 시작.
-  - `testCaseResults[].status`: string, required, 테스트 케이스 결과 상태. 값은 `PASSED`, `WRONG_ANSWER`, `RUNTIME_ERROR`, `TIME_LIMIT_EXCEEDED`, `MEMORY_LIMIT_EXCEEDED`.
-  - `testCaseResults[].executionTimeMillis`: number, optional, 실행 시간 ms. judge가 테스트 케이스별 실행 시간을 제공하지 않으면 null.
-  - `testCaseResults[].memoryUsageKilobytes`: number, optional, 메모리 사용량 KB. judge가 테스트 케이스별 메모리 사용량을 제공하지 않으면 null.
-  - `testCaseResults[].message`: string, optional, 실패 또는 진단 메시지. 첫 실패 케이스에는 judge `failure_message`가 저장될 수 있고 없으면 null.
+  - 테스트 케이스별 결과, 테스트 케이스 개수, 통과 개수, 실패 케이스 순서와 종류는 응답에 포함하지 않는다.
   - `compileErrorMessage`: string, optional, 컴파일 오류 메시지. `status=COMPILE_ERROR`일 때 사용하며 없으면 null.
   - `runtimeErrorMessage`: string, optional, 런타임 오류 메시지. `status=RUNTIME_ERROR`일 때 사용하며 없으면 null.
 - Status codes:
@@ -309,13 +304,13 @@
 ## 외부 API 매핑
 - `POST /api/v1/auth/google`은 Google issuer `https://accounts.google.com`의 JWK/metadata를 통해 Google ID token을 검증한다.
 - Google token audience는 `GOOGLE_OAUTH_CLIENT_ID` 환경 변수로 설정한다.
-- `POST /api/v1/submissions`는 judge를 직접 호출하지 않는다. 제출을 `QUEUED`로 저장하고 백그라운드 processor가 `GET /api/v1/judge-status`로 idle 상태를 확인한 뒤 가장 오래된 제출 하나를 `RUNNING`으로 전환해 `POST /api/v1/judge-attempts`를 호출한다.
+- `POST /api/v1/submissions`는 judge를 직접 호출하지 않는다. 제출을 `QUEUED`로 저장하고 백그라운드 processor가 `GET /api/v1/judge-status`로 idle 상태를 확인한 뒤 가장 오래된 제출 하나를 `RUNNING`으로 전환해 `POST /api/v1/judge-attempts`를 호출한다. status endpoint가 404 또는 405를 반환하는 judge 버전에서는 백엔드의 단일 queue processor lock으로 중복 실행을 막고 가장 오래된 제출 하나를 진행한다.
 - judge 요청에는 `problem_id=problems.id`, 제출 언어, 제출 소스 코드, `problems.checker_code`, HIDDEN 테스트 케이스, 문제 시간/메모리 제한을 전달한다.
-- judge status 조회 실패 시 제출은 `QUEUED`로 유지해 다음 poll에서 재시도한다. 채점 요청 실패 또는 응답 매핑 실패 시 해당 제출은 `INTERNAL_ERROR`로 종료한다.
+- judge status 조회가 연결 실패, 인증 실패, 5xx 등으로 실패하면 제출은 `QUEUED`로 유지해 다음 poll에서 재시도한다. status endpoint 미지원(404 또는 405)은 compatibility fallback으로 처리해 한 제출을 진행한다. 채점 요청 실패 또는 응답 매핑 실패 시 해당 제출은 `INTERNAL_ERROR`로 종료한다.
 - judge result mapping:
   - `completed` -> `ACCEPTED`.
   - `failed_compile` -> `COMPILE_ERROR`.
   - `failed_runtime_missing` -> `INTERNAL_ERROR`.
   - `failed_test_case` -> 첫 실패 테스트 케이스 상태에 따라 `WRONG_ANSWER`, `RUNTIME_ERROR`, `TIME_LIMIT_EXCEEDED`, `MEMORY_LIMIT_EXCEEDED`.
 - 문제 생성 시 저장된 `checkerCode`는 judge 요청의 `checker_code`로 전달한다. 값이 null이면 judge 기본 출력 비교를 사용한다.
-- 외부 retry 정책은 judge status 조회 실패에 대한 다음 poll 재시도만 정의한다. 이미 `INTERNAL_ERROR`가 된 제출의 재채점 API는 아직 정의하지 않는다.
+- 외부 retry 정책은 judge status 조회 장애에 대한 다음 poll 재시도만 정의한다. status endpoint 미지원 fallback과 달리 채점 요청 자체가 실패하면 이미 `INTERNAL_ERROR`가 된 제출의 재채점 API는 아직 정의하지 않는다.

@@ -1,12 +1,15 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactElement,
   type ReactNode,
 } from 'react'
 import {
   completeFirstLoginSignup,
+  refreshAuthSession,
   requestLogout,
   resolveAuthUserRole,
   startGoogleLogin,
@@ -24,6 +27,7 @@ type AuthProviderProps = {
 }
 
 const authStorageKey = 'kpsc_oj_auth_session'
+const accessTokenRefreshSkewMillis = 60_000
 const serviceUsernamePattern = /^[A-Za-z0-9_]{3,32}$/
 
 function createAuthActionError(
@@ -66,6 +70,26 @@ function normalizeServiceUsername(serviceUsername: string): string {
   return normalizedServiceUsername
 }
 
+function isAuthFailure(error: unknown): boolean {
+  const apiError = error as Partial<AuthApiError>
+
+  return apiError.status === 401 || apiError.code === 'AUTHENTICATION_FAILED'
+}
+
+function shouldClearSessionAfterRefreshError(error: unknown): boolean {
+  const apiError = error as Partial<AuthApiError>
+
+  return (
+    isAuthFailure(error) ||
+    apiError.status === 400 ||
+    apiError.code === 'INVALID_REQUEST'
+  )
+}
+
+function isAccessTokenFresh(session: AuthSession): boolean {
+  return Date.now() + accessTokenRefreshSkewMillis < session.expiresAtEpochMs
+}
+
 function readStoredSession(): AuthSession | null {
   const storedValue = window.localStorage.getItem(authStorageKey)
 
@@ -82,8 +106,7 @@ function readStoredSession(): AuthSession | null {
       session.tokenType !== 'Bearer' ||
       typeof session.expiresInSeconds !== 'number' ||
       typeof session.serviceUsername !== 'string' ||
-      typeof session.expiresAtEpochMs !== 'number' ||
-      Date.now() >= session.expiresAtEpochMs
+      typeof session.expiresAtEpochMs !== 'number'
     ) {
       window.localStorage.removeItem(authStorageKey)
 
@@ -124,7 +147,22 @@ function removeStoredSession(): void {
 /** 인증 세션, 최초 가입 대기 상태, localStorage persistence를 관리한다. */
 export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   const [session, setSession] = useState<AuthSession | null>(() => readStoredSession())
+  const sessionRef = useRef<AuthSession | null>(session)
+  const refreshPromiseRef = useRef<Promise<AuthSession> | null>(null)
   const [pendingSignup, setPendingSignup] = useState<PendingSignup | null>(null)
+
+  const applySession = useCallback((nextSession: AuthSession): void => {
+    persistSession(nextSession)
+    sessionRef.current = nextSession
+    setSession(nextSession)
+  }, [])
+
+  const clearSession = useCallback((): void => {
+    removeStoredSession()
+    sessionRef.current = null
+    setSession(null)
+    setPendingSignup(null)
+  }, [])
 
   const signInWithGoogleIdToken = useCallback(
     async (idToken: string): Promise<AuthLoginResult> => {
@@ -132,8 +170,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
       const loginResult = await startGoogleLogin(normalizedIdToken)
 
       if (loginResult.kind === 'requiresSignup') {
-        removeStoredSession()
-        setSession(null)
+        clearSession()
         setPendingSignup(loginResult.pendingSignup)
 
         return {
@@ -144,8 +181,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
 
       const nextSession = loginResult.session
 
-      persistSession(nextSession)
-      setSession(nextSession)
+      applySession(nextSession)
       setPendingSignup(null)
 
       return {
@@ -153,7 +189,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
         session: nextSession,
       }
     },
-    [],
+    [applySession, clearSession],
   )
 
   const completeSignup = useCallback(
@@ -168,26 +204,106 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
         normalizedServiceUsername,
       )
 
-      persistSession(nextSession)
-      setSession(nextSession)
+      applySession(nextSession)
       setPendingSignup(null)
 
       return nextSession
     },
-    [pendingSignup],
+    [applySession, pendingSignup],
   )
 
-  const signOut = useCallback(async (): Promise<void> => {
-    const currentAccessToken = session?.accessToken
+  const refreshCurrentSession = useCallback(
+    async (options?: { force?: boolean }): Promise<AuthSession> => {
+      const currentSession = sessionRef.current
 
-    removeStoredSession()
-    setSession(null)
-    setPendingSignup(null)
+      if (!currentSession) {
+        throw createAuthActionError('AUTHENTICATION_FAILED', '로그인이 필요합니다.', 401)
+      }
+
+      if (!options?.force && isAccessTokenFresh(currentSession)) {
+        return currentSession
+      }
+
+      if (!refreshPromiseRef.current) {
+        refreshPromiseRef.current = refreshAuthSession(currentSession.refreshToken)
+          .then((nextSession) => {
+            applySession(nextSession)
+
+            return nextSession
+          })
+          .catch((error: unknown) => {
+            if (shouldClearSessionAfterRefreshError(error)) {
+              clearSession()
+            }
+
+            throw error
+          })
+          .finally(() => {
+            refreshPromiseRef.current = null
+          })
+      }
+
+      return refreshPromiseRef.current
+    },
+    [applySession, clearSession],
+  )
+
+  const getFreshAccessToken = useCallback(async (): Promise<string> => {
+    const currentSession = sessionRef.current
+
+    if (!currentSession) {
+      throw createAuthActionError('AUTHENTICATION_FAILED', '로그인이 필요합니다.', 401)
+    }
+
+    if (isAccessTokenFresh(currentSession)) {
+      return currentSession.accessToken
+    }
+
+    const nextSession = await refreshCurrentSession()
+
+    return nextSession.accessToken
+  }, [refreshCurrentSession])
+
+  const requestWithFreshSession = useCallback(
+    async <TResult,>(
+      request: (accessToken: string) => Promise<TResult>,
+    ): Promise<TResult> => {
+      const accessToken = await getFreshAccessToken()
+
+      try {
+        return await request(accessToken)
+      } catch (error) {
+        if (!isAuthFailure(error)) {
+          throw error
+        }
+
+        const nextSession = await refreshCurrentSession({ force: true })
+
+        return request(nextSession.accessToken)
+      }
+    },
+    [getFreshAccessToken, refreshCurrentSession],
+  )
+
+  useEffect(() => {
+    const currentSession = sessionRef.current
+
+    if (!currentSession || isAccessTokenFresh(currentSession)) {
+      return
+    }
+
+    void refreshCurrentSession().catch(() => undefined)
+  }, [refreshCurrentSession])
+
+  const signOut = useCallback(async (): Promise<void> => {
+    const currentAccessToken = sessionRef.current?.accessToken
+
+    clearSession()
 
     if (currentAccessToken) {
       await requestLogout(currentAccessToken)
     }
-  }, [session])
+  }, [clearSession])
 
   const clearPendingSignup = useCallback((): void => {
     setPendingSignup(null)
@@ -200,6 +316,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
       isAdmin: session?.role === 'ADMIN',
       isAuthenticated: Boolean(session),
       pendingSignup,
+      requestWithFreshSession,
       session,
       signInWithGoogleIdToken,
       signOut,
@@ -208,6 +325,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
       clearPendingSignup,
       completeSignup,
       pendingSignup,
+      requestWithFreshSession,
       session,
       signInWithGoogleIdToken,
       signOut,

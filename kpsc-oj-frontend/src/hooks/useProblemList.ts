@@ -41,7 +41,7 @@ export function useProblemList(page: number): {
   isLoading: boolean
   problemPage: ProblemPage | null
 } {
-  const { session } = useAuth()
+  const { isAuthenticated, requestWithFreshSession } = useAuth()
   const [problemPage, setProblemPage] = useState<ProblemPage | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -50,7 +50,7 @@ export function useProblemList(page: number): {
     let isActive = true
 
     async function loadProblems(): Promise<void> {
-      if (!session) {
+      if (!isAuthenticated) {
         return
       }
 
@@ -58,7 +58,9 @@ export function useProblemList(page: number): {
       setErrorMessage(null)
 
       try {
-        const responseDto = await listProblems(session.accessToken, page)
+        const responseDto = await requestWithFreshSession((accessToken) =>
+          listProblems(accessToken, page),
+        )
 
         if (isActive) {
           setProblemPage(mapProblemListResponse(responseDto))
@@ -80,7 +82,7 @@ export function useProblemList(page: number): {
     return () => {
       isActive = false
     }
-  }, [page, session])
+  }, [isAuthenticated, page, requestWithFreshSession])
 
   return { errorMessage, isLoading, problemPage }
 }

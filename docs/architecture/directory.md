@@ -21,7 +21,7 @@
 | `kpsc-oj-frontend/src/pages/RankingPage.tsx` | file | 랭킹 | Page | 백엔드 랭킹 계약이 없어 준비 상태를 표시한다. |
 | `kpsc-oj-frontend/src/pages/AdminProblemNewPage.tsx` | file | 문제 생성 폼 | Page | 문제 생성 공용 폼에 생성 hook을 연결한다. |
 | `kpsc-oj-frontend/src/pages/AdminProblemEditPage.tsx` | file | 문제 수정 폼 | Page | 라우트 문제 번호를 검증하고 문제 정의 조회/수정 hook을 공용 폼에 연결한다. |
-| `kpsc-oj-frontend/src/components/common` | directory | 공통 UI 컴포넌트 | Shared UI | Button, Badge, Card, MarkdownContent를 포함한다. |
+| `kpsc-oj-frontend/src/components/common` | directory | 공통 UI 컴포넌트 | Shared UI | Button, Badge, Card, MarkdownContent를 포함한다. MarkdownContent는 Markdown과 LaTeX 수식 표시를 담당한다. |
 | `kpsc-oj-frontend/src/components/auth` | directory | 인증 UI 컴포넌트 | Auth UI | GoogleIdentityButton을 포함한다. |
 | `kpsc-oj-frontend/src/components/auth/ProtectedRoute.tsx` | file | 인증/role 보호 라우트 경계 | Auth route UI | 로그인 세션이 없는 사용자를 `/login`으로 이동시키고, 필요한 role이 없으면 보호 화면을 조립하지 않는다. |
 | `kpsc-oj-frontend/src/components/layout` | directory | 전역 레이아웃 UI 컴포넌트 | Shared layout UI | SiteHeader, SiteFooter를 포함한다. |

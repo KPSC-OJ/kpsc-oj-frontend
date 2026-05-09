@@ -173,6 +173,38 @@
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
 
+### GET /api/v1/problems/{problemNumber}/definition
+- 설명: 문제 생성자가 문제 수정을 위해 전체 문제 정의를 조회한다. 선택 checker code와 실제 채점용 비공개 테스트 케이스를 포함한다.
+- 인증: authenticated. 요청 사용자는 해당 문제의 `createdBy` 계정이어야 한다.
+- Path params:
+  - `problemNumber`: number, required, 조회할 문제 번호.
+- Query params: 없음.
+- Request body: 없음.
+- Response body:
+  - `id`: string, required, 문제 UUID.
+  - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호.
+  - `title`: string, required, 문제 제목.
+  - `tag`: string, required, 문제 유형 태그.
+  - `timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
+  - `memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문.
+  - `checkerCode`: string, optional, C++17 checker 코드. judge 기본 출력 비교를 사용하면 null.
+  - `exampleInputs`: string array, required, 공개 예시 입력 목록. 각 값 null 불가, 빈 문자열 가능.
+  - `exampleOutputs`: string array, required, 공개 예시 출력 목록. `exampleInputs`와 같은 순서와 개수.
+  - `actualTestCaseInputs`: string array, required, 실제 채점용 입력 목록. 각 값 null 불가, 빈 문자열 가능.
+  - `actualTestCaseOutputs`: string array, required, 실제 채점용 출력 목록. `actualTestCaseInputs`와 같은 순서와 개수.
+- Status codes:
+  - 200: 문제 정의 조회 성공.
+  - 400: `problemNumber` path parameter가 정수가 아님.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 인증 계정이 해당 문제 생성자가 아님.
+  - 404: 해당 문제 번호가 존재하지 않음.
+- Error cases:
+  - `INVALID_REQUEST`: `problemNumber` path parameter 형식 오류.
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `FORBIDDEN_OPERATION`: 문제 생성자가 아니므로 전체 문제 정의 조회 권한이 없음.
+  - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
+
 ### POST /api/v1/problems
 - 설명: 관리자 계정이 문제 본문, 선택 checker code, 공개 예제/실제 채점 테스트 케이스를 생성한다.
 - 인증: admin-only. `Authorization: Bearer {accessToken}` 필요.
@@ -208,6 +240,45 @@
   - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 또는 입출력 목록 개수 불일치.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성 권한이 없음.
+
+### PATCH /api/v1/problems/{problemNumber}
+- 설명: 문제를 생성한 인증 사용자가 문제 본문, 제한, 선택 checker code, 예시/실제 채점 테스트 케이스를 수정한다. 문제 번호와 생성자는 변경하지 않는다.
+- 인증: authenticated. 요청 사용자는 해당 문제의 `createdBy` 계정이어야 한다.
+- Path params:
+  - `problemNumber`: number, required, 수정할 문제 번호.
+- Query params: 없음.
+- Request body:
+  - `title`: string, required, 1-20자, 문제 제목, null 불가.
+  - `tag`: string, required, 1-64자, 문제 유형 태그, null 불가.
+  - `timeLimitSeconds`: number, required, 양의 정수, 채점 시간 제한 seconds 단위, null 불가.
+  - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가.
+  - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
+  - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
+  - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.
+  - `actualTestCaseInputs`: string array, required, 최소 1개, 실제 채점용 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 테스트 케이스를 표현할 수 있음.
+  - `actualTestCaseOutputs`: string array, required, 최소 1개, 실제 채점용 출력 목록, 각 값 null 불가. `actualTestCaseInputs`와 같은 개수여야 함.
+- Response body:
+  - `id`: string, required, 수정된 문제 UUID.
+  - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호. 수정 전과 동일하다.
+  - `title`: string, required, 저장된 문제 제목.
+  - `tag`: string, required, 저장된 문제 유형 태그.
+  - `timeLimitSeconds`: number, required, 저장된 시간 제한 seconds 단위.
+  - `memoryLimitMegabytes`: number, required, 저장된 메모리 제한 MB 단위.
+  - `exampleTestCaseCount`: number, required, 저장된 공개 예시 테스트 케이스 수.
+  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 실제 채점 입출력 본문은 응답에 포함하지 않음.
+  - checker code는 응답에 포함하지 않음.
+- Status codes:
+  - 200: 문제 수정 완료.
+  - 400: 요청 field 형식 오류 또는 입출력 목록 개수 불일치.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 인증 계정이 해당 문제 생성자가 아님.
+  - 404: 해당 문제 번호가 존재하지 않음.
+- Error cases:
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 또는 입출력 목록 개수 불일치.
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `FORBIDDEN_OPERATION`: 문제 생성자가 아니므로 수정 권한이 없음.
+  - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
 
 ### POST /api/v1/submissions
 - 설명: 인증된 사용자가 특정 문제에 소스 코드를 제출한다. 생성된 제출은 즉시 `QUEUED` 상태로 저장되며, HTTP 응답 이후 백그라운드 processor가 judge 상태를 확인해 비동기로 채점한다.
@@ -295,10 +366,11 @@
 
 ## 외부 API 매핑
 - `src/services/authService.ts`는 백엔드 `POST /api/v1/auth/google`, `POST /api/v1/auth/signup`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`을 호출한다.
-- `src/services/problemService.ts`는 백엔드 `GET /api/v1/problems`, `GET /api/v1/problems/{problemNumber}`, `POST /api/v1/problems`를 호출한다.
+- `src/services/problemService.ts`는 백엔드 `GET /api/v1/problems`, `GET /api/v1/problems/{problemNumber}`, `GET /api/v1/problems/{problemNumber}/definition`, `POST /api/v1/problems`, `PATCH /api/v1/problems/{problemNumber}`를 호출한다.
 - `src/services/submissionService.ts`는 백엔드 `POST /api/v1/submissions`, `GET /api/v1/submissions/me`, `GET /api/v1/submissions/{submissionId}`를 호출한다.
 - 제출 생성 후 `useSubmissionDetail`은 `GET /api/v1/submissions/{submissionId}`를 호출하고 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` 상태에서는 2.5초 간격으로 다시 조회한다.
 - `POST /api/v1/problems` 호출 화면은 `ProtectedRoute requiredRole="ADMIN"`으로 관리자 세션에만 노출하고, 백엔드 403 응답도 최종 권한 경계로 처리한다.
+- 문제 수정 화면은 `GET /api/v1/problems/{problemNumber}/definition`으로 전체 문제 정의를 채운 뒤 `PATCH /api/v1/problems/{problemNumber}`로 같은 DTO 구조를 저장한다.
 - 문제 생성 화면은 `checkerCode` 입력이 공백뿐이면 요청 body에서 생략한다.
 - `POST /api/v1/auth/google` 응답의 `requiresSignup=false`는 `AuthSession`, `requiresSignup=true`는 pending signup state로 정규화한다.
 - `POST /api/v1/auth/signup` 응답 token set은 즉시 `AuthSession`으로 변환하며, 이 시점에 로그인 완료 상태가 된다.

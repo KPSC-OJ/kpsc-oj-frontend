@@ -7,12 +7,13 @@
 | --- | --- | --- | --- | --- |
 | Problem list state | `useProblemList` | Backend API | No | `GET /api/v1/problems` 응답에서 변환한 문제 목록과 pagination 상태 |
 | Problem detail state | `useProblemDetail` | Backend API | No | `GET /api/v1/problems/{problemNumber}` 응답에서 변환한 제출 화면 문제 상세 |
+| Problem definition state | `useProblemDefinition` | Backend API | No | `GET /api/v1/problems/{problemNumber}/definition` 응답에서 변환한 수정 화면 문제 정의 |
 | Submission list state | `useMySubmissions` | Backend API | No | `GET /api/v1/submissions/me` 응답에서 변환한 내 제출 목록과 pagination 상태 |
 | Created submission state | `SubmitPage` | React state | No | `POST /api/v1/submissions` 성공 응답 표시 상태 |
 | Submission detail state | `useSubmissionDetail` | Backend API | No | `GET /api/v1/submissions/{submissionId}` 응답에서 변환한 제출 상세와 채점 결과 상태 |
 | Route state | `react-router-dom` | browser location | No | URL path와 `:id` 라우트 파라미터 |
-| Problem creation form state | `AdminProblemNewPage` | React state | No | 문제 생성 request DTO로 변환되는 제목, 태그, 제한, Markdown 본문, optional checker code, 예제/실제 테스트 케이스 입력값 |
-| Problem creation result state | `AdminProblemNewPage` | React state | No | 문제 생성 성공 응답과 오류 메시지 표시 상태 |
+| Problem definition form state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 request DTO로 변환되는 제목, 태그, 제한, Markdown 본문, optional checker code, 예제/실제 테스트 케이스 입력값 |
+| Problem mutation result state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 성공 응답과 오류 메시지 표시 상태 |
 | Code editor UI state | `SubmitPage` | React state | No | Monaco Editor의 선택 언어와 현재 소스 코드 |
 | Auth session state | `AuthProvider` | React state + localStorage | Yes | access token, refresh token, token type, 만료 시각, service username, role |
 | Pending signup state | `AuthProvider` | React state | No | `requiresSignup=true` 로그인 응답에서 생성되는 signup token과 검증된 Google email |
@@ -54,7 +55,7 @@
 - 여러 보호 API 호출이 동시에 refresh를 필요로 하면 `AuthProvider`는 하나의 refresh 요청만 수행하고 그 결과를 공유한다.
 - refresh가 400/401 또는 `INVALID_REQUEST`/`AUTHENTICATION_FAILED`로 실패하면 저장된 session을 제거한다.
 - access token payload의 `role`, `roles`, `authority`, `authorities`, `scope` claim에서 `ADMIN` 권한을 우선 정규화한다. claim에 role이 없으면 인증 응답 또는 기존 localStorage session의 role을 사용하고, 그래도 없으면 `USER`로 정규화한다.
-- `ADMIN`이 아닌 session은 문제 생성 nav와 `/admin/problems/new` 화면을 볼 수 없다.
+- `ADMIN`이 아닌 session은 문제 생성/수정 nav와 `/admin/problems/new`, `/admin/problems/:problemNumber/edit` 화면을 볼 수 없다.
 - `POST /api/v1/auth/google` 응답이 `requiresSignup=true`이면 기존 local session을 제거하고 pending signup state만 유지한다.
 - `POST /api/v1/auth/signup` 성공 응답의 token set을 `AuthSession`으로 변환하면 로그인 완료 상태가 된다.
 - logout은 local session을 먼저 제거하고 `POST /api/v1/auth/logout`으로 백엔드 session 폐기를 요청한다.

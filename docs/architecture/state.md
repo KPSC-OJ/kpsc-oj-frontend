@@ -5,7 +5,7 @@
 ## 상태 종류
 | State | Owner | Source of Truth | Persisted | Notes |
 | --- | --- | --- | --- | --- |
-| Problem list state | `useProblemList` | Backend API | No | `GET /api/v1/problems` 응답에서 변환한 문제 목록과 pagination 상태 |
+| Problem list state | `useProblemList` | Backend API | No | `GET /api/v1/problems` 응답에서 변환한 문제 목록, pagination 상태, 현재 세션 기준 수정 가능 여부 |
 | Problem detail state | `useProblemDetail` | Backend API | No | `GET /api/v1/problems/{problemNumber}` 응답에서 변환한 제출 화면 문제 상세 |
 | Problem definition state | `useProblemDefinition` | Backend API | No | `GET /api/v1/problems/{problemNumber}/definition` 응답에서 변환한 수정 화면 문제 정의 |
 | Submission list state | `useMySubmissions` | Backend API | No | `GET /api/v1/submissions/me` 응답에서 변환한 내 제출 목록과 pagination 상태 |
@@ -55,7 +55,8 @@
 - 여러 보호 API 호출이 동시에 refresh를 필요로 하면 `AuthProvider`는 하나의 refresh 요청만 수행하고 그 결과를 공유한다.
 - refresh가 400/401 또는 `INVALID_REQUEST`/`AUTHENTICATION_FAILED`로 실패하면 저장된 session을 제거한다.
 - access token payload의 `role`, `roles`, `authority`, `authorities`, `scope` claim에서 `ADMIN` 권한을 우선 정규화한다. claim에 role이 없으면 인증 응답 또는 기존 localStorage session의 role을 사용하고, 그래도 없으면 `USER`로 정규화한다.
-- `ADMIN`이 아닌 session은 문제 생성/수정 nav와 `/admin/problems/new`, `/admin/problems/:problemNumber/edit` 화면을 볼 수 없다.
+- `ADMIN`이 아닌 session은 문제 생성 nav와 `/admin/problems/new` 화면을 볼 수 없다.
+- 문제 수정 진입은 role만으로 결정하지 않고 문제 목록의 `createdByServiceUsername`과 현재 session의 `serviceUsername`이 일치할 때만 표시한다. 직접 URL 접근과 저장 요청은 백엔드의 문제 생성자 검증으로 최종 차단한다.
 - `POST /api/v1/auth/google` 응답이 `requiresSignup=true`이면 기존 local session을 제거하고 pending signup state만 유지한다.
 - `POST /api/v1/auth/signup` 성공 응답의 token set을 `AuthSession`으로 변환하면 로그인 완료 상태가 된다.
 - logout은 local session을 먼저 제거하고 `POST /api/v1/auth/logout`으로 백엔드 session 폐기를 요청한다.

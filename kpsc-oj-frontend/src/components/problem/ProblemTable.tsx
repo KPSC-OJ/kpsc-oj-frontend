@@ -2,14 +2,15 @@ import { Link } from 'react-router-dom'
 import type { ReactElement } from 'react'
 import { Pencil } from 'lucide-react'
 import { ButtonLink } from '../common/Button'
-import type { ProblemSummary } from '../../types/problem'
+import type { ProblemListItem } from '../../types/problem'
 
 type ProblemTableProps = {
-  canEdit?: boolean
-  problems: ProblemSummary[]
+  problems: ProblemListItem[]
 }
 
-export function ProblemTable({ canEdit = false, problems }: ProblemTableProps): ReactElement {
+export function ProblemTable({ problems }: ProblemTableProps): ReactElement {
+  const hasEditableProblem = problems.some((problem) => problem.canEdit)
+
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -21,7 +22,7 @@ export function ProblemTable({ canEdit = false, problems }: ProblemTableProps): 
               <th className="px-4 py-3">태그</th>
               <th className="px-4 py-3">시간 제한</th>
               <th className="px-4 py-3">메모리 제한</th>
-              {canEdit ? <th className="px-4 py-3">관리</th> : null}
+              {hasEditableProblem ? <th className="px-4 py-3">관리</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -43,16 +44,20 @@ export function ProblemTable({ canEdit = false, problems }: ProblemTableProps): 
                 <td className="px-4 py-4 font-medium">
                   {problem.memoryLimitMegabytes}MB
                 </td>
-                {canEdit ? (
+                {hasEditableProblem ? (
                   <td className="px-4 py-4">
-                    <ButtonLink
-                      size="sm"
-                      to={`/admin/problems/${problem.problemNumber}/edit`}
-                      variant="secondary"
-                    >
-                      <Pencil size={15} />
-                      수정
-                    </ButtonLink>
+                    {problem.canEdit ? (
+                      <ButtonLink
+                        size="sm"
+                        to={`/admin/problems/${problem.problemNumber}/edit`}
+                        variant="secondary"
+                      >
+                        <Pencil size={15} />
+                        수정
+                      </ButtonLink>
+                    ) : (
+                      <span className="text-slate-300">-</span>
+                    )}
                   </td>
                 ) : null}
               </tr>

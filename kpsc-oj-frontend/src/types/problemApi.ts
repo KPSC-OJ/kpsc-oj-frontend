@@ -36,6 +36,7 @@ export type ProblemListItemDto = {
   tag: string
   timeLimitSeconds: number
   memoryLimitMegabytes: number
+  createdByServiceUsername: string
 }
 
 export type ProblemListResponseDto = {

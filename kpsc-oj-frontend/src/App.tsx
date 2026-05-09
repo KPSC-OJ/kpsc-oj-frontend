@@ -73,7 +73,7 @@ function App() {
             <Route
               path="admin/problems/:problemNumber/edit"
               element={
-                <ProtectedRoute requiredRole="ADMIN">
+                <ProtectedRoute>
                   <AdminProblemEditPage />
                 </ProtectedRoute>
               }

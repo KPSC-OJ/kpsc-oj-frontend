@@ -3,6 +3,7 @@ import { RotateCcw, Send } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { Badge } from '../components/common/Badge'
 import { Button } from '../components/common/Button'
+import { MarkdownContent } from '../components/common/MarkdownContent'
 import { CodeEditor, type CodeEditorLanguage } from '../components/problem/CodeEditor'
 import { SubmissionStatusBadge } from '../components/submission/SubmissionStatusBadge'
 import { useCreateSubmission } from '../hooks/useCreateSubmission'
@@ -191,9 +192,7 @@ export function SubmitPage() {
               <h2 className="text-xl font-black text-slate-950">
                 {problem.problemNumber}. {problem.title}
               </h2>
-              <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-600">
-                {problem.statementMarkdown}
-              </div>
+              <MarkdownContent className="mt-4" markdown={problem.statementMarkdown} />
             </div>
 
             <div className="pt-6">

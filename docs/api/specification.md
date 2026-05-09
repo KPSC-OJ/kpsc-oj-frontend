@@ -137,6 +137,7 @@
   - `problems[].tag`: string, required, 문제 유형 태그.
   - `problems[].timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
   - `problems[].memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
+  - `problems[].createdByServiceUsername`: string, required, 문제를 생성한 서비스 아이디. 프론트엔드는 현재 로그인한 `serviceUsername`과 일치할 때만 수정 진입을 표시한다.
 - Status codes:
   - 200: 문제 목록 조회 성공.
   - 400: `page`가 정수가 아니거나 1 미만.
@@ -158,7 +159,7 @@
   - `tag`: string, required, 문제 유형 태그.
   - `timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문. 제출 화면에서는 Markdown으로 렌더링해 표시한다.
   - `exampleTestCases`: array, required, 공개 예시 테스트 케이스 목록.
   - `exampleTestCases[].order`: number, required, 예시 테스트 케이스 순서.
   - `exampleTestCases[].input`: string, required, 공개 예시 입력 본문. 빈 문자열 가능.
@@ -370,7 +371,7 @@
 - `src/services/submissionService.ts`는 백엔드 `POST /api/v1/submissions`, `GET /api/v1/submissions/me`, `GET /api/v1/submissions/{submissionId}`를 호출한다.
 - 제출 생성 후 `useSubmissionDetail`은 `GET /api/v1/submissions/{submissionId}`를 호출하고 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` 상태에서는 2.5초 간격으로 다시 조회한다.
 - `POST /api/v1/problems` 호출 화면은 `ProtectedRoute requiredRole="ADMIN"`으로 관리자 세션에만 노출하고, 백엔드 403 응답도 최종 권한 경계로 처리한다.
-- 문제 수정 화면은 `GET /api/v1/problems/{problemNumber}/definition`으로 전체 문제 정의를 채운 뒤 `PATCH /api/v1/problems/{problemNumber}`로 같은 DTO 구조를 저장한다.
+- 문제 수정 화면은 `GET /api/v1/problems/{problemNumber}/definition`으로 전체 문제 정의를 채운 뒤 `PATCH /api/v1/problems/{problemNumber}`로 같은 DTO 구조를 저장한다. 두 API 모두 백엔드에서 문제 생성자 여부를 최종 검증한다.
 - 문제 생성 화면은 `checkerCode` 입력이 공백뿐이면 요청 body에서 생략한다.
 - `POST /api/v1/auth/google` 응답의 `requiresSignup=false`는 `AuthSession`, `requiresSignup=true`는 pending signup state로 정규화한다.
 - `POST /api/v1/auth/signup` 응답 token set은 즉시 `AuthSession`으로 변환하며, 이 시점에 로그인 완료 상태가 된다.

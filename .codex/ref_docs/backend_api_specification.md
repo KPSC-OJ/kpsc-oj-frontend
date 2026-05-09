@@ -181,6 +181,38 @@
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
 
+### GET /api/v1/problems/{problemNumber}/definition
+- 설명: 문제 생성자가 문제 수정을 위해 전체 문제 정의를 조회한다. 선택 checker code와 실제 채점용 비공개 테스트 케이스를 포함하므로 문제 생성자에게만 반환한다.
+- 인증: authenticated. `Authorization: Bearer {accessToken}` 필요. 요청 사용자는 해당 문제의 `createdBy` 계정이어야 한다.
+- Path params:
+  - `problemNumber`: number, required, 조회할 문제 번호.
+- Query params: 없음.
+- Request body: 없음.
+- Response body:
+  - `id`: string, required, 문제 UUID.
+  - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호.
+  - `title`: string, required, 문제 제목.
+  - `tag`: string, required, 문제 유형 태그.
+  - `timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
+  - `memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문.
+  - `checkerCode`: string, optional, C++17 checker 코드. judge 기본 출력 비교를 사용하면 null.
+  - `exampleInputs`: string array, required, 공개 예시 입력 목록. 각 값 null 불가, 빈 문자열 가능.
+  - `exampleOutputs`: string array, required, 공개 예시 출력 목록. `exampleInputs`와 같은 순서와 개수.
+  - `actualTestCaseInputs`: string array, required, 실제 채점용 입력 목록. 각 값 null 불가, 빈 문자열 가능.
+  - `actualTestCaseOutputs`: string array, required, 실제 채점용 출력 목록. `actualTestCaseInputs`와 같은 순서와 개수.
+- Status codes:
+  - 200: 문제 정의 조회 성공.
+  - 400: `problemNumber` path parameter가 정수가 아님.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 인증 계정이 해당 문제 생성자가 아님.
+  - 404: 해당 문제 번호가 존재하지 않음.
+- Error cases:
+  - `INVALID_REQUEST`: `problemNumber` path parameter 형식 오류.
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `FORBIDDEN_OPERATION`: 문제 생성자가 아니므로 전체 문제 정의 조회 권한이 없음.
+  - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
+
 ### POST /api/v1/problems
 - 설명: 관리자 계정이 문제 본문과 예시/실제 채점 테스트 케이스를 생성한다.
 - 인증: admin-only. `Authorization: Bearer {accessToken}` 필요.
@@ -216,6 +248,45 @@
   - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 또는 입출력 목록 개수 불일치.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성 권한이 없음.
+
+### PATCH /api/v1/problems/{problemNumber}
+- 설명: 문제를 생성한 인증 사용자가 문제 본문, 제한, 선택 checker code, 예시/실제 채점 테스트 케이스를 수정한다. 문제 번호와 생성자는 변경하지 않는다.
+- 인증: authenticated. `Authorization: Bearer {accessToken}` 필요. 요청 사용자는 해당 문제의 `createdBy` 계정이어야 한다.
+- Path params:
+  - `problemNumber`: number, required, 수정할 문제 번호.
+- Query params: 없음.
+- Request body:
+  - `title`: string, required, 1-20자, 문제 제목, null 불가.
+  - `tag`: string, required, 1-64자, 문제 유형 태그, null 불가.
+  - `timeLimitSeconds`: number, required, 양의 정수, 채점 시간 제한 seconds 단위, null 불가.
+  - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가.
+  - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
+  - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
+  - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.
+  - `actualTestCaseInputs`: string array, required, 최소 1개, 실제 채점용 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 테스트 케이스를 표현할 수 있음.
+  - `actualTestCaseOutputs`: string array, required, 최소 1개, 실제 채점용 출력 목록, 각 값 null 불가. `actualTestCaseInputs`와 같은 개수여야 함.
+- Response body:
+  - `id`: string, required, 수정된 문제 UUID.
+  - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호. 수정 전과 동일하다.
+  - `title`: string, required, 저장된 문제 제목.
+  - `tag`: string, required, 저장된 문제 유형 태그.
+  - `timeLimitSeconds`: number, required, 저장된 시간 제한 seconds 단위.
+  - `memoryLimitMegabytes`: number, required, 저장된 메모리 제한 MB 단위.
+  - `exampleTestCaseCount`: number, required, 저장된 공개 예시 테스트 케이스 수.
+  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 실제 채점 입출력 본문은 응답에 포함하지 않음.
+  - checker code는 응답에 포함하지 않음.
+- Status codes:
+  - 200: 문제 수정 완료.
+  - 400: 요청 field 형식 오류 또는 입출력 목록 개수 불일치.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 인증 계정이 해당 문제 생성자가 아님.
+  - 404: 해당 문제 번호가 존재하지 않음.
+- Error cases:
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 또는 입출력 목록 개수 불일치.
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `FORBIDDEN_OPERATION`: 문제 생성자가 아니므로 수정 권한이 없음.
+  - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
 
 ### POST /api/v1/submissions
 - 설명: 인증된 사용자가 특정 문제에 소스 코드를 제출한다. 생성된 제출은 즉시 `QUEUED` 상태로 저장되며, HTTP 응답 이후 백그라운드 processor가 judge 상태를 확인해 비동기로 채점한다.
@@ -300,6 +371,189 @@
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 제출 상세 조회 권한이 없음.
   - `SUBMISSION_NOT_FOUND`: 해당 제출이 존재하지 않음.
+
+### GET /admin/login
+- 설명: Thymeleaf 기반 관리자 로그인 화면을 반환한다.
+- 인증: public.
+- Path params: 없음.
+- Query params:
+  - `error`: string, optional, 로그인 실패 후 표시 상태.
+  - `logout`: string, optional, 로그아웃 완료 후 표시 상태.
+- Request body: 없음.
+- Response body: HTML document.
+- Status codes:
+  - 200: 로그인 화면 반환.
+- Error cases: 없음.
+
+### POST /admin/login
+- 설명: `.env` 또는 runtime 환경 변수의 `ADMIN_USERNAME`, `ADMIN_PASSWORD`와 form 입력을 비교해 관리자 세션을 생성한다.
+- 인증: public. CSRF token 필요.
+- Path params: 없음.
+- Query params: 없음.
+- Request body: `application/x-www-form-urlencoded`.
+  - `username`: string, required, 관리자 아이디.
+  - `password`: string, required, 관리자 비밀번호.
+  - `_csrf`: string, required, Spring Security CSRF token.
+- Response body: 없음. 성공/실패 모두 redirect.
+- Status codes:
+  - 302: 성공 시 `/admin`, 실패 시 `/admin/login?error`로 redirect.
+- Error cases:
+  - 인증 실패: `/admin/login?error`로 redirect.
+
+### GET /admin
+- 설명: 인증된 관리자에게 Thymeleaf 관리자 대시보드 화면을 반환한다.
+- 인증: admin-session. `POST /admin/login`으로 생성된 서버 세션 필요.
+- Path params: 없음.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: HTML document.
+- Status codes:
+  - 200: 관리자 대시보드 반환.
+  - 302: 관리자 세션이 없으면 `/admin/login`으로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
+
+### GET /admin/users
+- 설명: 인증된 관리자에게 사용자 목록과 계정 권한 변경 form이 포함된 Thymeleaf 사용자 관리 화면을 반환한다.
+- 인증: admin-session. `POST /admin/login`으로 생성된 서버 세션 필요.
+- Path params: 없음.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: HTML document.
+  - 표시 정보: 서비스 아이디, email, 계정 상태, 생성 시각, 현재 권한.
+  - 권한 선택 값: `USER`, `ADMIN`.
+- Status codes:
+  - 200: 사용자 관리 화면 반환.
+  - 302: 관리자 세션이 없으면 `/admin/login`으로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
+
+### POST /admin/users/{userAccountId}/role
+- 설명: 관리자 화면에서 선택한 사용자 계정의 권한을 변경한다.
+- 인증: admin-session. CSRF token 필요.
+- Path params:
+  - `userAccountId`: string, required, 권한을 변경할 사용자 계정 UUID.
+- Query params: 없음.
+- Request body: `application/x-www-form-urlencoded`.
+  - `role`: string, required, 변경할 권한. 허용 값은 `USER`, `ADMIN`.
+  - `_csrf`: string, required, Spring Security CSRF token.
+- Response body: 없음. 성공/실패 모두 redirect.
+- Status codes:
+  - 302: 처리 후 `/admin/users`로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
+  - 유효하지 않은 사용자 또는 role: `/admin/users`로 redirect하고 오류 메시지를 표시한다.
+
+### GET /admin/problems
+- 설명: 인증된 관리자에게 전체 문제 목록과 수정 진입 링크가 포함된 Thymeleaf 문제 관리 화면을 반환한다.
+- 인증: admin-session. `POST /admin/login`으로 생성된 서버 세션 필요.
+- Path params: 없음.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: HTML document.
+  - 표시 정보: 문제 번호, 제목, 태그, 생성자, 수정 시각.
+- Status codes:
+  - 200: 문제 관리 화면 반환.
+  - 302: 관리자 세션이 없으면 `/admin/login`으로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
+
+### GET /admin/problems/new
+- 설명: 인증된 관리자에게 문제 생성 form이 포함된 Thymeleaf 화면을 반환한다.
+- 인증: admin-session. `POST /admin/login`으로 생성된 서버 세션 필요.
+- Path params: 없음.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: HTML document.
+  - 생성자 선택 값: 현재 DB에 존재하는 `ADMIN` 권한 사용자 계정.
+  - 입력 항목: 제목, 태그, 시간 제한, 메모리 제한, 문제 설명 Markdown, 선택 checker code, 예시 테스트 케이스, 채점 테스트 케이스.
+- Status codes:
+  - 200: 문제 생성 화면 반환.
+  - 302: 관리자 세션이 없으면 `/admin/login`으로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
+  - `ADMIN` 권한 사용자 계정이 없으면 화면에 오류 메시지를 표시하고 제출 버튼을 비활성화한다.
+
+### POST /admin/problems
+- 설명: 관리자 화면에서 입력한 문제 본문과 예시/실제 채점 테스트 케이스를 생성한다.
+- 인증: admin-session. CSRF token 필요.
+- Path params: 없음.
+- Query params: 없음.
+- Request body: `application/x-www-form-urlencoded`.
+  - `createdByUserAccountId`: string, required, 문제 생성자로 저장할 `ADMIN` 권한 사용자 계정 UUID.
+  - `title`: string, required, 1-20자, 문제 제목.
+  - `tag`: string, required, 1-64자, 문제 유형 태그.
+  - `timeLimitSeconds`: number, required, 양수.
+  - `memoryLimitMegabytes`: number, required, 양수.
+  - `statementMarkdown`: string, required, 문제 지문 Markdown.
+  - `checkerCode`: string, optional, C++17 checker source code. 빈 문자열은 저장 시 null로 처리한다.
+  - `exampleInputs[index]`: string, required, 예시 입력. 최소 1개.
+  - `exampleOutputs[index]`: string, required, 예시 출력. `exampleInputs`와 같은 개수.
+  - `actualTestCaseInputs[index]`: string, required, 실제 채점 입력. 최소 1개.
+  - `actualTestCaseOutputs[index]`: string, required, 실제 채점 출력. `actualTestCaseInputs`와 같은 개수.
+  - `_csrf`: string, required, Spring Security CSRF token.
+- Response body: 없음. 성공/실패 모두 HTML redirect 또는 form 재표시.
+- Status codes:
+  - 200: validation 실패 또는 생성 실패 시 문제 생성 화면을 다시 반환.
+  - 302: 생성 성공 시 `/admin/problems/new`로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
+  - 입력 형식 오류, 입출력 목록 개수 불일치, 생성자 권한 부족 또는 사용자 없음: 문제 생성 화면을 다시 표시하고 오류 메시지를 표시한다.
+
+### GET /admin/problems/{problemNumber}/edit
+- 설명: 인증된 관리자에게 기존 문제 수정 form이 포함된 Thymeleaf 화면을 반환한다. 관리자 페이지에서는 문제 생성자와 무관하게 모든 문제를 수정할 수 있다.
+- 인증: admin-session. `POST /admin/login`으로 생성된 서버 세션 필요.
+- Path params:
+  - `problemNumber`: number, required, 수정할 문제 번호.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: HTML document.
+  - 입력 항목: 제목, 태그, 시간 제한, 메모리 제한, 문제 설명 Markdown, 선택 checker code, 예시 테스트 케이스, 실제 채점용 비공개 테스트 케이스.
+- Status codes:
+  - 200: 문제 수정 화면 반환.
+  - 302: 관리자 세션이 없으면 `/admin/login`으로 redirect. 문제가 없으면 `/admin/problems`로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
+  - 문제 없음: `/admin/problems`로 redirect하고 오류 메시지를 표시한다.
+
+### POST /admin/problems/{problemNumber}
+- 설명: 관리자 화면에서 입력한 문제 본문과 예시/실제 채점 테스트 케이스 수정 내용을 저장한다. 문제 번호와 생성자는 변경하지 않는다.
+- 인증: admin-session. CSRF token 필요.
+- Path params:
+  - `problemNumber`: number, required, 수정할 문제 번호.
+- Query params: 없음.
+- Request body: `application/x-www-form-urlencoded`.
+  - `title`: string, required, 1-20자, 문제 제목.
+  - `tag`: string, required, 1-64자, 문제 유형 태그.
+  - `timeLimitSeconds`: number, required, 양수.
+  - `memoryLimitMegabytes`: number, required, 양수.
+  - `statementMarkdown`: string, required, 문제 지문 Markdown.
+  - `checkerCode`: string, optional, C++17 checker source code. 빈 문자열은 저장 시 null로 처리한다.
+  - `exampleInputs[index]`: string, required, 예시 입력. 최소 1개.
+  - `exampleOutputs[index]`: string, required, 예시 출력. `exampleInputs`와 같은 개수.
+  - `actualTestCaseInputs[index]`: string, required, 실제 채점 입력. 최소 1개.
+  - `actualTestCaseOutputs[index]`: string, required, 실제 채점 출력. `actualTestCaseInputs`와 같은 개수.
+  - `_csrf`: string, required, Spring Security CSRF token.
+- Response body: 없음. 성공/실패 모두 HTML redirect 또는 form 재표시.
+- Status codes:
+  - 200: validation 실패 또는 수정 실패 시 문제 수정 화면을 다시 반환.
+  - 302: 수정 성공 시 `/admin/problems`로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
+  - 입력 형식 오류, 입출력 목록 개수 불일치, 문제 없음: 문제 수정 화면을 다시 표시하고 오류 메시지를 표시한다.
+
+### POST /admin/logout
+- 설명: 관리자 서버 세션을 종료하고 로그인 화면으로 이동한다.
+- 인증: admin-session. CSRF token 필요.
+- Path params: 없음.
+- Query params: 없음.
+- Request body: `application/x-www-form-urlencoded`.
+  - `_csrf`: string, required, Spring Security CSRF token.
+- Response body: 없음. 성공 시 redirect.
+- Status codes:
+  - 302: `/admin/login?logout`으로 redirect.
+- Error cases:
+  - 인증 필요: `/admin/login`으로 redirect.
 
 ## 외부 API 매핑
 - `POST /api/v1/auth/google`은 Google issuer `https://accounts.google.com`의 JWK/metadata를 통해 Google ID token을 검증한다.

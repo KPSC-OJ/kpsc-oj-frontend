@@ -17,6 +17,16 @@ export type ProblemDetail = ProblemSummary & {
   exampleTestCases: ProblemExample[]
 }
 
+export type ProblemDefinition = ProblemSummary & {
+  id: string
+  statementMarkdown: string
+  checkerCode: string | null
+  exampleInputs: string[]
+  exampleOutputs: string[]
+  actualTestCaseInputs: string[]
+  actualTestCaseOutputs: string[]
+}
+
 export type ProblemPage = {
   page: number
   pageSize: number

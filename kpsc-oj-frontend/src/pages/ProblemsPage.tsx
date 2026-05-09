@@ -41,7 +41,7 @@ export function ProblemsPage() {
         </Card>
       ) : problemPage && problemPage.problems.length > 0 ? (
         <>
-          <ProblemTable problems={problemPage.problems} />
+          <ProblemTable canEdit={isAdmin} problems={problemPage.problems} />
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-slate-500">
               전체 {problemPage.totalElements}개 · {problemPage.page} /{' '}

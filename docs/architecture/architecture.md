@@ -2,7 +2,7 @@
 
 ## 요약
 kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
-현재 구현은 인증, 문제 목록, 문제 상세, 제출 생성, 제출 상세/채점 결과, 내 제출 목록, 관리자 문제 생성 화면에서 백엔드 REST API를 호출한다.
+현재 구현은 인증, 문제 목록, 문제 상세, 문제 생성/수정, 제출 생성, 제출 상세/채점 결과, 내 제출 목록 화면에서 백엔드 REST API를 호출한다.
 백엔드 연결을 위해 화면 조립, UI 컴포넌트, service, 상태 저장소 경계를 분리한다.
 
 ## 기본 정보
@@ -11,7 +11,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 - 데이터베이스: 프론트엔드 직접 사용 없음
 - 인증 사용: Google ID token 기반 백엔드 로그인, signup, token refresh, logout, session role 연동
 - 문제/제출 사용: authenticated backend API 연동
-- 관리자 문제 생성: `ADMIN` role 세션에만 화면 노출, admin-only backend API 연동
+- 관리자 문제 생성/수정: `ADMIN` role 세션에만 화면 노출, backend problem definition API 연동
 - 외부 API 연동: Google Identity Services script, kpsc-oj-backend auth API
 
 ## 계층 방향
@@ -54,6 +54,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | `/submissions` | AppLayout + ProtectedRoute | SubmissionsPage | 인증된 내 제출 기록 |
 | `/ranking` | AppLayout + ProtectedRoute | RankingPage | 랭킹 준비 상태 |
 | `/admin/problems/new` | AppLayout + ProtectedRoute requiredRole=ADMIN | AdminProblemNewPage | `ADMIN` 세션만 접근 가능한 문제 생성 폼 |
+| `/admin/problems/:problemNumber/edit` | AppLayout + ProtectedRoute requiredRole=ADMIN | AdminProblemEditPage | `ADMIN` 세션만 접근 가능한 문제 수정 폼 |
 
 ## 아키텍처 결정
 | Date | Decision | Reason | Impact |
@@ -74,3 +75,4 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | 2026-05-09 | 문제 생성 요청에 선택 `checkerCode`를 추가한다. | 문제별 C++17 checker를 선택적으로 등록할 수 있어야 한다. | 관리자 문제 생성 폼에 checker 입력을 추가하고 공백이면 요청 body에서 생략한다. |
 | 2026-05-09 | 제출 생성 후 제출 상세 API를 polling한다. | 백엔드가 제출을 `QUEUED`로 저장한 뒤 비동기로 채점하기 때문이다. | `SubmitPage`는 제출 생성 직후 `GET /api/v1/submissions/{submissionId}`를 조회하고 진행 중 상태에서는 2.5초 간격으로 결과를 갱신한다. |
 | 2026-05-09 | 보호 API 호출 전에 auth store가 access token을 갱신한다. | access token TTL이 15분이라 사용 중 세션 만료가 빈번하게 발생할 수 있기 때문이다. | Hook은 `requestWithFreshSession()`으로 service를 호출하고, `AuthProvider`는 `POST /api/v1/auth/refresh` rotation 결과를 localStorage에 저장한다. |
+| 2026-05-09 | 문제 생성과 수정 폼을 `ProblemDefinitionForm`으로 공유한다. | 백엔드의 생성/수정 request DTO가 같은 문제 정의 구조를 사용하기 때문이다. | 생성 페이지는 `POST /api/v1/problems`, 수정 페이지는 definition 조회 후 `PATCH /api/v1/problems/{problemNumber}`를 호출한다. |

@@ -1,4 +1,4 @@
-export type CreateProblemRequestDto = {
+export type ProblemMutationRequestDto = {
   title: string
   tag: string
   timeLimitSeconds: number
@@ -11,7 +11,11 @@ export type CreateProblemRequestDto = {
   actualTestCaseOutputs: string[]
 }
 
-export type CreateProblemResponseDto = {
+export type CreateProblemRequestDto = ProblemMutationRequestDto
+
+export type UpdateProblemRequestDto = ProblemMutationRequestDto
+
+export type ProblemMutationResponseDto = {
   id: string
   problemNumber: number
   title: string
@@ -21,6 +25,10 @@ export type CreateProblemResponseDto = {
   exampleTestCaseCount: number
   actualTestCaseCount: number
 }
+
+export type CreateProblemResponseDto = ProblemMutationResponseDto
+
+export type UpdateProblemResponseDto = ProblemMutationResponseDto
 
 export type ProblemListItemDto = {
   problemNumber: number
@@ -52,4 +60,19 @@ export type ProblemDetailResponseDto = {
   memoryLimitMegabytes: number
   statementMarkdown: string
   exampleTestCases: ProblemExampleTestCaseDto[]
+}
+
+export type ProblemDefinitionResponseDto = {
+  id: string
+  problemNumber: number
+  title: string
+  tag: string
+  timeLimitSeconds: number
+  memoryLimitMegabytes: number
+  statementMarkdown: string
+  checkerCode?: string | null
+  exampleInputs: string[]
+  exampleOutputs: string[]
+  actualTestCaseInputs: string[]
+  actualTestCaseOutputs: string[]
 }

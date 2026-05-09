@@ -3,6 +3,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { AppLayout } from './layouts/AppLayout'
 import { ProblemWorkspaceLayout } from './layouts/ProblemWorkspaceLayout'
 import { PublicLayout } from './layouts/PublicLayout'
+import { AdminProblemEditPage } from './pages/AdminProblemEditPage'
 import { AdminProblemNewPage } from './pages/AdminProblemNewPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
@@ -66,6 +67,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="ADMIN">
                   <AdminProblemNewPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/problems/:problemNumber/edit"
+              element={
+                <ProtectedRoute requiredRole="ADMIN">
+                  <AdminProblemEditPage />
                 </ProtectedRoute>
               }
             />

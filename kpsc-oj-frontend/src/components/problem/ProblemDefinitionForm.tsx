@@ -545,7 +545,7 @@ export function ProblemDefinitionForm({
                     커스텀 checker 사용
                   </span>
                   <span className="mt-1 block text-sm leading-6 text-slate-500">
-                    체크하지 않으면 judge가 expected output과 제출 stdout을 직접 비교합니다.
+                    필수 항목이 아닙니다. 체크하지 않으면 judge가 expected output과 제출 stdout을 직접 비교합니다.
                   </span>
                 </span>
               </label>
@@ -558,7 +558,7 @@ export function ProblemDefinitionForm({
                       className="text-sm font-bold text-slate-700"
                       htmlFor="checkerCode"
                     >
-                      채점용 checker C++ 코드
+                      채점용 testlib checker C++ 코드
                     </label>
                     <textarea
                       id="checkerCode"
@@ -568,7 +568,7 @@ export function ProblemDefinitionForm({
                       value={formState.checkerCode}
                     />
                     <span className="mt-1 block text-xs text-slate-500">
-                      checker는 exit code 0이면 정답, 0이 아니면 오답으로 처리됩니다.
+                      testlib.h를 include하고 registerTestlibCmd(argc, argv)로 초기화한 전체 C++17 소스를 입력하세요.
                     </span>
                   </div>
                 </div>

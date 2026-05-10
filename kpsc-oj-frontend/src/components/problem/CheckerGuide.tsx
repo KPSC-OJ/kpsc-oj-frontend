@@ -1,27 +1,20 @@
 import type { ReactElement } from 'react'
-import { Card } from '../common/Card'
 
-const checkerTemplate = `#include <bits/stdc++.h>
-using namespace std;
+const checkerTemplate = `#include "testlib.h"
 
 int main(int argc, char* argv[]) {
-    if (argc != 3) {
-        return 1;
+    setName("compare one integer");
+    registerTestlibCmd(argc, argv);
+
+    int expected = ans.readInt();
+    int actual = ouf.readInt();
+
+    if (actual != expected) {
+        quitf(_wa, "expected %d, found %d", expected, actual);
     }
 
-    ifstream expected_file(argv[1]);
-    ifstream actual_file(argv[2]);
-
-    if (!expected_file.is_open() || !actual_file.is_open()) {
-        return 1;
-    }
-
-    // expected_file: 테스트케이스 expected output
-    // actual_file: 제출 프로그램 stdout
-
-    bool accepted = false;
-
-    return accepted ? 0 : 1;
+    ouf.readEof();
+    quitf(_ok, "answer is %d", actual);
 }`
 
 const checkerUseCases = [
@@ -32,23 +25,24 @@ const checkerUseCases = [
 ]
 
 const checkerChecklist = [
-  'g++ -std=c++17로 로컬 컴파일이 되는지 확인한다.',
-  'argc != 3인 경우를 오답으로 처리한다.',
-  'argv[1]은 expected, argv[2]는 actual 출력 파일로 읽는다.',
-  '제출 출력이 부족하거나 형식이 틀리면 non-zero exit code를 반환한다.',
-  'checker 전용 데이터가 필요하면 expected output에 넣고 argv[1]에서 파싱한다.',
+  'testlib.h를 include하고 main 초기에 registerTestlibCmd(argc, argv)를 호출한다.',
+  'inf는 테스트케이스 입력, ouf는 제출 stdout, ans는 expected output으로 읽는다.',
+  '정답은 quitf(_ok, ...), 오답은 quitf(_wa, ...)로 종료한다.',
+  '제출 출력이 부족하거나 형식이 틀리면 _wa로 처리한다.',
+  '불필요한 추가 출력이 오답이어야 하면 ouf.readEof()로 끝까지 확인한다.',
   '최악의 출력 크기에서도 문제의 시간/메모리 제한 안에 끝나는지 확인한다.',
 ]
 
-/** 출제자가 C++17 checker 코드를 작성할 때 필요한 실행 규약과 확인 항목을 표시한다. */
+/** 출제자가 testlib 기반 C++17 checker 코드를 작성할 때 필요한 규약을 표시한다. */
 export function CheckerGuide(): ReactElement {
   return (
-    <Card className="space-y-5 bg-slate-50 shadow-none">
+    <div className="space-y-5 rounded-md border border-slate-200 bg-slate-50 p-5">
       <div>
-        <h2 className="text-lg font-black text-slate-950">checker 작성 가이드</h2>
+        <h2 className="text-lg font-black text-slate-950">testlib checker 작성 가이드</h2>
         <p className="mt-1 text-sm leading-6 text-slate-600">
           기본 채점은 expected output과 제출 stdout을 직접 비교합니다. 정답이 여러
-          형태로 가능하거나 별도 비교 규칙이 필요할 때만 checker를 등록합니다.
+          형태로 가능하거나 별도 비교 규칙이 필요할 때만 checker를 등록하면 됩니다.
+          필요하지 않으면 커스텀 checker를 선택하지 말고 비워둘 수 있습니다.
         </p>
       </div>
 
@@ -68,16 +62,37 @@ export function CheckerGuide(): ReactElement {
             <dt className="font-bold text-slate-500">언어</dt>
             <dd className="text-slate-700">C++17</dd>
             <dt className="font-bold text-slate-500">컴파일</dt>
-            <dd className="font-mono text-xs text-slate-700">g++ -std=c++17</dd>
+            <dd className="font-mono text-xs text-slate-700">
+              g++ -std=c++17
+            </dd>
             <dt className="font-bold text-slate-500">실행</dt>
             <dd className="font-mono text-xs text-slate-700">
-              checker &lt;expected_output_file&gt; &lt;actual_output_file&gt;
+              checker &lt;input_file&gt; &lt;actual_output_file&gt; &lt;expected_output_file&gt;
+            </dd>
+            <dt className="font-bold text-slate-500">초기화</dt>
+            <dd className="font-mono text-xs text-slate-700">
+              registerTestlibCmd(argc, argv)
             </dd>
             <dt className="font-bold text-slate-500">정답</dt>
-            <dd className="text-slate-700">exit code 0</dd>
+            <dd className="font-mono text-xs text-slate-700">quitf(_ok, ...)</dd>
             <dt className="font-bold text-slate-500">오답</dt>
-            <dd className="text-slate-700">0이 아닌 exit code</dd>
+            <dd className="font-mono text-xs text-slate-700">quitf(_wa, ...)</dd>
           </dl>
+        </div>
+      </div>
+
+      <div className="grid gap-3 rounded-md border border-blue-100 bg-white px-4 py-3 text-sm leading-6 text-slate-700 md:grid-cols-3">
+        <div>
+          <p className="font-bold text-slate-900">inf</p>
+          <p className="text-slate-600">테스트케이스 입력</p>
+        </div>
+        <div>
+          <p className="font-bold text-slate-900">ouf</p>
+          <p className="text-slate-600">제출 프로그램 stdout</p>
+        </div>
+        <div>
+          <p className="font-bold text-slate-900">ans</p>
+          <p className="text-slate-600">expected output</p>
         </div>
       </div>
 
@@ -102,10 +117,10 @@ export function CheckerGuide(): ReactElement {
       </details>
 
       <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-        checker stdout과 stderr는 정답 여부에 영향을 주지 않습니다. 판정은 반드시 exit
-        code로 표현해야 하며, 제출 코드가 런타임 오류, 시간 초과, 메모리 초과를 내면
-        checker는 실행되지 않습니다.
+        judge 환경에는 testlib.h가 제공됩니다. checker stdout과 stderr는 정답 여부에
+        영향을 주지 않으므로 판정은 testlib의 verdict로 표현해야 합니다. 제출 코드가
+        런타임 오류, 시간 초과, 메모리 초과를 내면 checker는 실행되지 않습니다.
       </div>
-    </Card>
+    </div>
   )
 }

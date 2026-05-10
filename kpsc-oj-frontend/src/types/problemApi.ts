@@ -11,7 +11,9 @@ export type ProblemMutationRequestDto = {
   actualTestCaseOutputs: string[]
 }
 
-export type CreateProblemRequestDto = ProblemMutationRequestDto
+export type CreateProblemRequestDto = ProblemMutationRequestDto & {
+  referenceSolutionCode: string
+}
 
 export type UpdateProblemRequestDto = ProblemMutationRequestDto
 

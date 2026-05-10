@@ -9,7 +9,11 @@ import { Button } from '../common/Button'
 import { Card } from '../common/Card'
 import { CheckerGuide } from './CheckerGuide'
 import type { AuthApiError } from '../../types/auth'
-import type { ProblemMutationRequestDto } from '../../types/problemApi'
+import type {
+  CreateProblemRequestDto,
+  ProblemMutationRequestDto,
+  UpdateProblemRequestDto,
+} from '../../types/problemApi'
 
 export type ProblemDefinitionFormInitialValue = {
   checkerCode?: string | null
@@ -30,14 +34,11 @@ export type ProblemDefinitionFormSaveResult = {
   title: string
 }
 
-type ProblemDefinitionFormProps = {
+type ProblemDefinitionFormBaseProps = {
   description: string
   eyebrow: string
   forbiddenErrorMessage: string
   initialValue?: ProblemDefinitionFormInitialValue
-  onSubmit: (
-    requestDto: ProblemMutationRequestDto,
-  ) => Promise<ProblemDefinitionFormSaveResult>
   resetOnSuccess?: boolean
   submitErrorFallback: string
   submitLabel: string
@@ -46,9 +47,28 @@ type ProblemDefinitionFormProps = {
   title: string
 }
 
+type ProblemDefinitionFormCreateProps = ProblemDefinitionFormBaseProps & {
+  onSubmit: (
+    requestDto: CreateProblemRequestDto,
+  ) => Promise<ProblemDefinitionFormSaveResult>
+  requiresReferenceSolution: true
+}
+
+type ProblemDefinitionFormUpdateProps = ProblemDefinitionFormBaseProps & {
+  onSubmit: (
+    requestDto: UpdateProblemRequestDto,
+  ) => Promise<ProblemDefinitionFormSaveResult>
+  requiresReferenceSolution?: false
+}
+
+type ProblemDefinitionFormProps =
+  | ProblemDefinitionFormCreateProps
+  | ProblemDefinitionFormUpdateProps
+
 type ProblemFormState = {
   checkerCode: string
   memoryLimitMegabytes: string
+  referenceSolutionCode: string
   statementMarkdown: string
   tag: string
   timeLimitSeconds: string
@@ -66,6 +86,7 @@ type TestCaseKind = 'example' | 'actual'
 const emptyProblemFormState: ProblemFormState = {
   checkerCode: '',
   memoryLimitMegabytes: '128',
+  referenceSolutionCode: '',
   statementMarkdown: '',
   tag: '',
   timeLimitSeconds: '1',
@@ -108,6 +129,7 @@ function createFormState(initialValue?: ProblemDefinitionFormInitialValue): Prob
   return {
     checkerCode: initialValue.checkerCode ?? '',
     memoryLimitMegabytes: String(initialValue.memoryLimitMegabytes),
+    referenceSolutionCode: '',
     statementMarkdown: initialValue.statementMarkdown,
     tag: initialValue.tag,
     timeLimitSeconds: String(initialValue.timeLimitSeconds),
@@ -148,6 +170,14 @@ function getSubmitErrorMessage(
     return '문제를 찾을 수 없습니다.'
   }
 
+  if (apiError.code === 'PROBLEM_VERIFICATION_FAILED') {
+    return '예시 정답 코드가 실제 채점 테스트 케이스를 통과하지 못했습니다. 코드와 기대 출력을 확인해주세요.'
+  }
+
+  if (apiError.status === 503 || apiError.code === 'JUDGE_UNAVAILABLE') {
+    return 'judge 서버 문제로 예시 정답 코드 검증을 완료하지 못했습니다. 잠시 후 다시 시도해주세요.'
+  }
+
   if (typeof apiError.message === 'string') {
     return apiError.message
   }
@@ -157,6 +187,7 @@ function getSubmitErrorMessage(
 
 function renderValidationMessage(
   formState: ProblemFormState,
+  requiresReferenceSolution: boolean,
   timeLimitSeconds: number | null,
   memoryLimitMegabytes: number | null,
 ): string | null {
@@ -186,6 +217,10 @@ function renderValidationMessage(
 
   if (!formState.statementMarkdown.trim()) {
     return '문제 본문을 입력해야 합니다.'
+  }
+
+  if (requiresReferenceSolution && !formState.referenceSolutionCode.trim()) {
+    return '예시 정답 C++17 코드를 입력해야 합니다.'
   }
 
   return null
@@ -269,19 +304,20 @@ function TestCaseEditor({
   )
 }
 
-export function ProblemDefinitionForm({
-  description,
-  eyebrow,
-  forbiddenErrorMessage,
-  initialValue,
-  onSubmit,
-  resetOnSuccess = false,
-  submitErrorFallback,
-  submitLabel,
-  submittingLabel,
-  successTitle,
-  title,
-}: ProblemDefinitionFormProps): ReactElement {
+export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactElement {
+  const {
+    description,
+    eyebrow,
+    forbiddenErrorMessage,
+    initialValue,
+    resetOnSuccess = false,
+    submitErrorFallback,
+    submitLabel,
+    submittingLabel,
+    successTitle,
+    title,
+  } = props
+  const requiresReferenceSolution = props.requiresReferenceSolution === true
   const [formState, setFormState] = useState<ProblemFormState>(() =>
     createFormState(initialValue),
   )
@@ -388,6 +424,7 @@ export function ProblemDefinitionForm({
     const memoryLimitMegabytes = parsePositiveInteger(formState.memoryLimitMegabytes)
     const validationMessage = renderValidationMessage(
       formState,
+      requiresReferenceSolution,
       timeLimitSeconds,
       memoryLimitMegabytes,
     )
@@ -405,7 +442,7 @@ export function ProblemDefinitionForm({
     }
 
     const checkerCode = usesCustomChecker ? formState.checkerCode : null
-    const requestDto: ProblemMutationRequestDto = {
+    const mutationRequestDto: ProblemMutationRequestDto = {
       actualTestCaseInputs: actualCases.map((testCase) => testCase.input),
       actualTestCaseOutputs: actualCases.map((testCase) => testCase.output),
       checkerCode,
@@ -421,7 +458,13 @@ export function ProblemDefinitionForm({
     setIsSubmitting(true)
 
     try {
-      const nextSavedProblem = await onSubmit(requestDto)
+      const nextSavedProblem =
+        props.requiresReferenceSolution === true
+          ? await props.onSubmit({
+              ...mutationRequestDto,
+              referenceSolutionCode: formState.referenceSolutionCode,
+            })
+          : await props.onSubmit(mutationRequestDto)
 
       setSavedProblem(nextSavedProblem)
 
@@ -531,6 +574,24 @@ export function ProblemDefinitionForm({
                 value={formState.statementMarkdown}
               />
             </label>
+
+            {requiresReferenceSolution ? (
+              <label className="block md:col-span-2">
+                <span className="text-sm font-bold text-slate-700">
+                  예시 정답 C++17 코드
+                </span>
+                <textarea
+                  className="mt-2 min-h-64 w-full resize-y rounded-md border border-slate-200 px-4 py-3 font-mono text-xs leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  onChange={updateField('referenceSolutionCode')}
+                  placeholder="실제 채점 테스트 케이스를 모두 통과하는 C++17 전체 소스 코드를 입력하세요."
+                  required
+                  value={formState.referenceSolutionCode}
+                />
+                <span className="mt-1 block text-xs text-slate-500">
+                  생성 요청에만 전송되며 저장되지 않습니다. 제출한 코드가 실제 채점 테스트를 통과해야 문제가 생성됩니다.
+                </span>
+              </label>
+            ) : null}
 
             <div className="space-y-4 md:col-span-2">
               <label className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">

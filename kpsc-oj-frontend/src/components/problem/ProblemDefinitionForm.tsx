@@ -7,6 +7,7 @@ import {
 import { CheckCircle2, Plus, Save, Trash2 } from 'lucide-react'
 import { Button } from '../common/Button'
 import { Card } from '../common/Card'
+import { CheckerGuide } from './CheckerGuide'
 import type { AuthApiError } from '../../types/auth'
 import type { ProblemMutationRequestDto } from '../../types/problemApi'
 
@@ -122,6 +123,10 @@ function parsePositiveInteger(value: string): number | null {
   }
 
   return parsedValue
+}
+
+function hasInitialCheckerCode(initialValue?: ProblemDefinitionFormInitialValue): boolean {
+  return Boolean(initialValue?.checkerCode?.trim())
 }
 
 function getSubmitErrorMessage(
@@ -280,6 +285,9 @@ export function ProblemDefinitionForm({
   const [formState, setFormState] = useState<ProblemFormState>(() =>
     createFormState(initialValue),
   )
+  const [usesCustomChecker, setUsesCustomChecker] = useState(() =>
+    hasInitialCheckerCode(initialValue),
+  )
   const [exampleCases, setExampleCases] = useState<TestCaseFormRow[]>(() =>
     createRowsFromValues(
       'example',
@@ -354,6 +362,7 @@ export function ProblemDefinitionForm({
 
   function resetForm(): void {
     setFormState(createFormState(initialValue))
+    setUsesCustomChecker(hasInitialCheckerCode(initialValue))
     setExampleCases(
       createRowsFromValues(
         'example',
@@ -389,7 +398,13 @@ export function ProblemDefinitionForm({
       return
     }
 
-    const checkerCode = formState.checkerCode.trim() ? formState.checkerCode : undefined
+    if (usesCustomChecker && !formState.checkerCode.trim()) {
+      setErrorMessage('커스텀 checker를 사용하려면 C++17 checker 코드를 입력해야 합니다.')
+
+      return
+    }
+
+    const checkerCode = usesCustomChecker ? formState.checkerCode : null
     const requestDto: ProblemMutationRequestDto = {
       actualTestCaseInputs: actualCases.map((testCase) => testCase.input),
       actualTestCaseOutputs: actualCases.map((testCase) => testCase.output),
@@ -517,18 +532,48 @@ export function ProblemDefinitionForm({
               />
             </label>
 
-            <label className="block md:col-span-2">
-              <span className="text-sm font-bold text-slate-700">채점용 checker C++ 코드</span>
-              <textarea
-                className="mt-2 min-h-56 w-full resize-y rounded-md border border-slate-200 px-4 py-3 font-mono text-xs leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                onChange={updateField('checkerCode')}
-                placeholder="기본 출력 비교를 사용할 경우 비워둡니다."
-                value={formState.checkerCode}
-              />
-              <span className="mt-1 block text-xs text-slate-500">
-                C++17 checker 코드가 있는 경우에만 등록합니다.
-              </span>
-            </label>
+            <div className="space-y-4 md:col-span-2">
+              <label className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+                <input
+                  checked={usesCustomChecker}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  onChange={(event) => setUsesCustomChecker(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>
+                  <span className="block text-sm font-bold text-slate-800">
+                    커스텀 checker 사용
+                  </span>
+                  <span className="mt-1 block text-sm leading-6 text-slate-500">
+                    체크하지 않으면 judge가 expected output과 제출 stdout을 직접 비교합니다.
+                  </span>
+                </span>
+              </label>
+
+              {usesCustomChecker ? (
+                <div className="space-y-4">
+                  <CheckerGuide />
+                  <div>
+                    <label
+                      className="text-sm font-bold text-slate-700"
+                      htmlFor="checkerCode"
+                    >
+                      채점용 checker C++ 코드
+                    </label>
+                    <textarea
+                      id="checkerCode"
+                      className="mt-2 min-h-56 w-full resize-y rounded-md border border-slate-200 px-4 py-3 font-mono text-xs leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      onChange={updateField('checkerCode')}
+                      placeholder="C++17 전체 소스 코드를 입력하세요."
+                      value={formState.checkerCode}
+                    />
+                    <span className="mt-1 block text-xs text-slate-500">
+                      checker는 exit code 0이면 정답, 0이 아니면 오답으로 처리됩니다.
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </Card>
 

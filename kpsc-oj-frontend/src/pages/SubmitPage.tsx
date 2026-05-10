@@ -5,6 +5,8 @@ import { Badge } from '../components/common/Badge'
 import { Button } from '../components/common/Button'
 import { MarkdownContent } from '../components/common/MarkdownContent'
 import { CodeEditor, type CodeEditorLanguage } from '../components/problem/CodeEditor'
+import { ProblemExampleBlock } from '../components/problem/ProblemExampleBlock'
+import { ProblemSubmissionHistory } from '../components/submission/ProblemSubmissionHistory'
 import { SubmissionStatusBadge } from '../components/submission/SubmissionStatusBadge'
 import { useCreateSubmission } from '../hooks/useCreateSubmission'
 import { useMySubmissions } from '../hooks/useMySubmissions'
@@ -35,6 +37,8 @@ const submissionLanguageOptions: Array<{
   { editorLanguage: 'cpp', label: 'C++17', value: 'cpp17' },
   { editorLanguage: 'python', label: 'Python 3', value: 'python3' },
 ]
+
+type ProblemPanelTab = 'statement' | 'submissions'
 
 function parseProblemNumber(value: string | undefined): number | null {
   const parsedValue = Number(value)
@@ -82,6 +86,15 @@ function formatScorePercentage(scorePercentage: number | null): string {
   return scorePercentage === null ? '점수 산정 전' : `${scorePercentage}%`
 }
 
+function getProblemPanelTabClassName(isActive: boolean): string {
+  return [
+    'border-b-2 px-1 py-4 text-sm font-bold transition',
+    isActive
+      ? 'border-blue-600 text-blue-700'
+      : 'border-transparent text-slate-500 hover:text-slate-950',
+  ].join(' ')
+}
+
 function getSubmissionDiagnosticMessage(submissionDetail: SubmissionDetail): string | null {
   return submissionDetail.compileErrorMessage ?? submissionDetail.runtimeErrorMessage
 }
@@ -90,7 +103,19 @@ export function SubmitPage() {
   const { id } = useParams()
   const problemNumber = parseProblemNumber(id)
   const { errorMessage: problemErrorMessage, isLoading, problem } = useProblemDetail(problemNumber)
-  const { submissionPage } = useMySubmissions(1, problemNumber ?? undefined)
+  const [activeProblemPanelTab, setActiveProblemPanelTab] =
+    useState<ProblemPanelTab>('statement')
+  const [submissionListPage, setSubmissionListPage] = useState(1)
+  const [submissionListRefreshKey, setSubmissionListRefreshKey] = useState(0)
+  const {
+    errorMessage: submissionListErrorMessage,
+    isLoading: isSubmissionListLoading,
+    submissionPage,
+  } = useMySubmissions(
+    submissionListPage,
+    problemNumber ?? undefined,
+    submissionListRefreshKey,
+  )
   const { createSubmissionWithCurrentSession } = useCreateSubmission()
   const [selectedLanguage, setSelectedLanguage] = useState<SubmissionLanguageDto>('cpp17')
   const [sourceCode, setSourceCode] = useState(defaultSourceCode)
@@ -137,6 +162,8 @@ export function SubmitPage() {
       })
 
       setCreatedSubmission(nextCreatedSubmission)
+      setSubmissionListPage(1)
+      setSubmissionListRefreshKey((currentRefreshKey) => currentRefreshKey + 1)
     } catch (error) {
       setSubmitErrorMessage(getErrorMessage(error))
     } finally {
@@ -168,13 +195,17 @@ export function SubmitPage() {
         <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="flex shrink-0 items-center gap-6 border-b border-slate-200 px-5">
             <button
-              className="border-b-2 border-blue-600 px-1 py-4 text-sm font-bold text-blue-700"
+              aria-pressed={activeProblemPanelTab === 'statement'}
+              className={getProblemPanelTabClassName(activeProblemPanelTab === 'statement')}
+              onClick={() => setActiveProblemPanelTab('statement')}
               type="button"
             >
               문제 설명
             </button>
             <button
-              className="border-b-2 border-transparent px-1 py-4 text-sm font-bold text-slate-500 hover:text-slate-950"
+              aria-pressed={activeProblemPanelTab === 'submissions'}
+              className={getProblemPanelTabClassName(activeProblemPanelTab === 'submissions')}
+              onClick={() => setActiveProblemPanelTab('submissions')}
               type="button"
             >
               내 제출
@@ -182,44 +213,48 @@ export function SubmitPage() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-5">
-            <div className="mb-5 flex flex-wrap items-center gap-2">
-              <Badge tone="blue">{problem.tag}</Badge>
-              <Badge>{problem.timeLimitSeconds}s</Badge>
-              <Badge>{problem.memoryLimitMegabytes}MB</Badge>
-            </div>
+            {activeProblemPanelTab === 'statement' ? (
+              <>
+                <div className="mb-5 flex flex-wrap items-center gap-2">
+                  <Badge tone="blue">{problem.tag}</Badge>
+                  <Badge>{problem.timeLimitSeconds}s</Badge>
+                  <Badge>{problem.memoryLimitMegabytes}MB</Badge>
+                </div>
 
-            <div className="border-b border-slate-100 pb-6">
-              <h2 className="text-xl font-black text-slate-950">
-                {problem.problemNumber}. {problem.title}
-              </h2>
-              <MarkdownContent className="mt-4" markdown={problem.statementMarkdown} />
-            </div>
+                <div className="border-b border-slate-100 pb-6">
+                  <h2 className="text-xl font-black text-slate-950">
+                    {problem.problemNumber}. {problem.title}
+                  </h2>
+                  <MarkdownContent className="mt-4" markdown={problem.statementMarkdown} />
+                </div>
 
-            <div className="pt-6">
-              <h3 className="text-base font-black text-slate-950">입출력 예</h3>
-              <div className="mt-4 grid gap-4">
-                {problem.exampleTestCases.map((exampleTestCase) => (
-                  <div className="grid gap-4 md:grid-cols-2" key={exampleTestCase.order}>
-                    <div>
-                      <div className="mb-2 text-xs font-black uppercase text-slate-400">
-                        Input {exampleTestCase.order}
+                <div className="pt-6">
+                  <h3 className="text-base font-black text-slate-950">입출력 예</h3>
+                  <div className="mt-4 grid gap-4">
+                    {problem.exampleTestCases.map((exampleTestCase) => (
+                      <div className="grid gap-4 md:grid-cols-2" key={exampleTestCase.order}>
+                        <ProblemExampleBlock
+                          label={`Input ${exampleTestCase.order}`}
+                          value={exampleTestCase.input}
+                        />
+                        <ProblemExampleBlock
+                          label={`Output ${exampleTestCase.order}`}
+                          value={exampleTestCase.output}
+                        />
                       </div>
-                      <pre className="min-h-16 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                        {exampleTestCase.input}
-                      </pre>
-                    </div>
-                    <div>
-                      <div className="mb-2 text-xs font-black uppercase text-slate-400">
-                        Output {exampleTestCase.order}
-                      </div>
-                      <pre className="min-h-16 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                        {exampleTestCase.output}
-                      </pre>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              </>
+            ) : (
+              <ProblemSubmissionHistory
+                errorMessage={submissionListErrorMessage}
+                isLoading={isSubmissionListLoading}
+                onPageChange={setSubmissionListPage}
+                page={submissionListPage}
+                submissionPage={submissionPage}
+              />
+            )}
           </div>
         </aside>
 

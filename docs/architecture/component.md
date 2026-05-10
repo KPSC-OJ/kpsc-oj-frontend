@@ -32,8 +32,11 @@
 | `SiteHeader` | layout | none | 전역 브랜드, 주요 내비게이션, 시작 액션 표시 |
 | `SiteFooter` | layout | none | 전역 하단 브랜드와 주요 링크 표시 |
 | `CodeEditor` | problem | language, value, onChange | Monaco 기반 코드 입력 UI |
+| `ProblemExampleBlock` | problem | label, value | 문제 예제 입출력 원문 표시와 클립보드 복사 버튼 |
 | `ProblemTable` | problem | `ProblemListItem[]` | 문제 목록 테이블과 본인 출제 문제의 수정 진입 표시 |
+| `CheckerGuide` | problem | none | 커스텀 checker 사용을 선택한 출제자에게 C++17 checker 실행 규약, 템플릿, 확인 목록 표시 |
 | `ProblemDefinitionForm` | problem | initial problem definition, submit callback | 문제 생성/수정 공용 입력 폼과 client-side validation |
+| `ProblemSubmissionHistory` | submission | submission page state, pagination callback | 제출 작업 화면에서 현재 문제로 필터링된 내 제출 기록 표시 |
 | `SubmissionStatusBadge` | submission | `SubmissionStatus` | 제출 상태 색상 매핑 |
 
 ## React 메모
@@ -48,6 +51,9 @@
 - `LoginPage`는 실제 서비스 사용자를 기준으로 구성하며 backend URL, OAuth client id, raw ID token 입력 같은 개발자용 진단 UI를 표시하지 않는다.
 - 문제 조회/생성/수정 API 호출은 `Page -> problem hook -> auth store token refresh -> problemService -> Backend API` 흐름을 따른다.
 - 제출 화면의 문제 본문은 `MarkdownContent`를 통해 Markdown과 `$...$`, `$$...$$` LaTeX 수식을 렌더링하고, `SubmitPage`는 Markdown/수식 파싱 세부사항을 직접 갖지 않는다.
-- 문제 생성/수정 폼의 optional checker code는 request DTO의 `checkerCode`로만 전달하며, 공백이면 요청 body에서 생략한다.
+- 제출 화면의 공개 예제 입출력은 `ProblemExampleBlock`이 표시하며, 각 Input/Output 블록은 브라우저 Clipboard API 또는 textarea fallback으로 원문 복사를 제공한다.
+- 문제 생성/수정 폼의 optional checker code는 request DTO의 `checkerCode`로만 전달한다. 커스텀 checker를 선택하지 않으면 `checkerCode=null`을 전달해 기본 출력 비교를 사용한다.
+- 문제 생성/수정 폼은 커스텀 checker 사용 체크박스를 제공하고, 선택한 경우에만 `CheckerGuide`와 코드 입력란을 표시한다. checker 컴파일 가능 여부와 최종 유효성은 백엔드와 judge가 검증한다.
 - 제출 조회/생성/상세 API 호출은 `Page -> submission hook -> auth store token refresh -> submissionService -> Backend API` 흐름을 따른다.
+- 제출 작업 화면의 `내 제출` 탭은 `SubmitPage`가 보유한 탭/page/refresh 상태를 `ProblemSubmissionHistory`에 props로 전달하고, 컴포넌트는 API 호출 없이 목록 표시와 pagination 버튼만 담당한다.
 - 제출 생성 후 상세 결과는 `useSubmissionDetail`이 `SubmissionDetail` view model로 변환하며, 채점 진행 중 상태에서는 polling한다.

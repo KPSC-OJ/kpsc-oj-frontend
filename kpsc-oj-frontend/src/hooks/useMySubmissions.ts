@@ -40,6 +40,7 @@ function getErrorMessage(error: unknown): string {
 export function useMySubmissions(
   page: number,
   problemNumber?: number,
+  refreshKey = 0,
 ): {
   errorMessage: string | null
   isLoading: boolean
@@ -86,7 +87,7 @@ export function useMySubmissions(
     return () => {
       isActive = false
     }
-  }, [isAuthenticated, page, problemNumber, requestWithFreshSession])
+  }, [isAuthenticated, page, problemNumber, refreshKey, requestWithFreshSession])
 
   return { errorMessage, isLoading, submissionPage }
 }

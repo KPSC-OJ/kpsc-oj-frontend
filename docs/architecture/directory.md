@@ -16,7 +16,7 @@
 | `kpsc-oj-frontend/src/pages/HomePage.tsx` | file | 홈 대시보드 | Page | 공개 홈 화면을 조립한다. |
 | `kpsc-oj-frontend/src/pages/LoginPage.tsx` | file | 로그인과 최초 가입 화면 | Page | auth store action을 호출하고 인증 UI를 조립한다. |
 | `kpsc-oj-frontend/src/pages/ProblemsPage.tsx` | file | 문제 목록 | Page | 문제 목록 hook 상태를 `ProblemTable`에 전달한다. |
-| `kpsc-oj-frontend/src/pages/SubmitPage.tsx` | file | 제출 작업 화면 | Page | 문제 상세 조회, 제출 생성, 제출 상세 결과 표시 흐름을 조립한다. |
+| `kpsc-oj-frontend/src/pages/SubmitPage.tsx` | file | 제출 작업 화면 | Page | 문제 상세 조회, 현재 문제 내 제출 목록 탭, 제출 생성, 제출 상세 결과 표시 흐름을 조립한다. |
 | `kpsc-oj-frontend/src/pages/SubmissionsPage.tsx` | file | 제출 기록 | Page | 내 제출 목록 hook 상태를 테이블로 표시한다. |
 | `kpsc-oj-frontend/src/pages/RankingPage.tsx` | file | 랭킹 | Page | 백엔드 랭킹 계약이 없어 준비 상태를 표시한다. |
 | `kpsc-oj-frontend/src/pages/AdminProblemNewPage.tsx` | file | 문제 생성 폼 | Page | 문제 생성 공용 폼에 생성 hook을 연결한다. |
@@ -25,9 +25,12 @@
 | `kpsc-oj-frontend/src/components/auth` | directory | 인증 UI 컴포넌트 | Auth UI | GoogleIdentityButton을 포함한다. |
 | `kpsc-oj-frontend/src/components/auth/ProtectedRoute.tsx` | file | 인증/role 보호 라우트 경계 | Auth route UI | 로그인 세션이 없는 사용자를 `/login`으로 이동시키고, 필요한 role이 없으면 보호 화면을 조립하지 않는다. |
 | `kpsc-oj-frontend/src/components/layout` | directory | 전역 레이아웃 UI 컴포넌트 | Shared layout UI | SiteHeader, SiteFooter를 포함한다. |
-| `kpsc-oj-frontend/src/components/problem` | directory | 문제 도메인 표시/입력 컴포넌트 | Feature UI | `ProblemTable`, `ProblemDefinitionForm`을 포함한다. |
+| `kpsc-oj-frontend/src/components/problem` | directory | 문제 도메인 표시/입력 컴포넌트 | Feature UI | `ProblemTable`, `ProblemExampleBlock`, `ProblemDefinitionForm`, `CheckerGuide`를 포함한다. |
+| `kpsc-oj-frontend/src/components/problem/ProblemExampleBlock.tsx` | file | 예제 입출력 표시 | Feature UI | 제출 화면의 공개 예제 Input/Output 원문과 클립보드 복사 버튼을 표시한다. |
 | `kpsc-oj-frontend/src/components/problem/ProblemDefinitionForm.tsx` | file | 문제 정의 입력 폼 | Feature UI | 문제 생성/수정에서 공유하는 제목, 제한, 본문, checker, 테스트 케이스 입력과 client-side validation을 담당한다. |
-| `kpsc-oj-frontend/src/components/submission` | directory | 제출 도메인 표시 컴포넌트 | Feature UI | `SubmissionStatusBadge`를 포함한다. |
+| `kpsc-oj-frontend/src/components/problem/CheckerGuide.tsx` | file | checker 작성 안내 | Feature UI | 커스텀 checker를 선택한 출제자에게 checker 사용 시점, 실행 규약, 템플릿, 작성 전 확인 목록을 표시한다. |
+| `kpsc-oj-frontend/src/components/submission` | directory | 제출 도메인 표시 컴포넌트 | Feature UI | `SubmissionStatusBadge`, `ProblemSubmissionHistory`를 포함한다. |
+| `kpsc-oj-frontend/src/components/submission/ProblemSubmissionHistory.tsx` | file | 문제별 내 제출 기록 표시 | Feature UI | 제출 작업 화면에서 현재 문제의 내 제출 목록, 빈 상태, 오류 상태, pagination UI를 표시한다. |
 | `kpsc-oj-frontend/src/hooks` | directory | 화면 유스케이스 hook | Application hook | API service와 page 사이의 비동기 흐름을 캡슐화한다. |
 | `kpsc-oj-frontend/src/hooks/useCreateProblem.ts` | file | 문제 생성 hook | Application hook | auth store가 갱신한 access token으로 문제 생성 service를 호출한다. |
 | `kpsc-oj-frontend/src/hooks/useProblemDefinition.ts` | file | 문제 정의 조회 hook | Application hook | 수정 화면용 전체 문제 정의 API 응답을 UI 모델로 변환한다. |

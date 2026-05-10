@@ -8,11 +8,13 @@
 | Problem list state | `useProblemList` | Backend API | No | `GET /api/v1/problems` 응답에서 변환한 문제 목록, pagination 상태, 현재 세션 기준 수정 가능 여부 |
 | Problem detail state | `useProblemDetail` | Backend API | No | `GET /api/v1/problems/{problemNumber}` 응답에서 변환한 제출 화면 문제 상세 |
 | Problem definition state | `useProblemDefinition` | Backend API | No | `GET /api/v1/problems/{problemNumber}/definition` 응답에서 변환한 수정 화면 문제 정의 |
-| Submission list state | `useMySubmissions` | Backend API | No | `GET /api/v1/submissions/me` 응답에서 변환한 내 제출 목록과 pagination 상태 |
+| Submission list state | `useMySubmissions` | Backend API | No | `GET /api/v1/submissions/me` 응답에서 변환한 내 제출 목록과 pagination 상태. 제출 작업 화면에서는 `problemNumber` 필터와 refresh key로 현재 문제의 내 제출 목록을 재조회한다. |
 | Created submission state | `SubmitPage` | React state | No | `POST /api/v1/submissions` 성공 응답 표시 상태 |
 | Submission detail state | `useSubmissionDetail` | Backend API | No | `GET /api/v1/submissions/{submissionId}` 응답에서 변환한 제출 상세와 채점 결과 상태 |
+| Submit panel UI state | `SubmitPage` | React state | No | 제출 작업 화면 좌측 패널의 `문제 설명`/`내 제출` 탭, 문제별 제출 목록 page, 제출 성공 후 목록 refresh key |
 | Route state | `react-router-dom` | browser location | No | URL path와 `:id` 라우트 파라미터 |
-| Problem definition form state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 request DTO로 변환되는 제목, 태그, 제한, Markdown 본문, optional checker code, 예제/실제 테스트 케이스 입력값 |
+| Example copy feedback state | `ProblemExampleBlock` | React state | No | 예제 Input/Output 복사 버튼의 idle/copied/failed 표시 상태 |
+| Problem definition form state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 request DTO로 변환되는 제목, 태그, 제한, Markdown 본문, 커스텀 checker 사용 여부와 optional checker code, 예제/실제 테스트 케이스 입력값 |
 | Problem mutation result state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 성공 응답과 오류 메시지 표시 상태 |
 | Code editor UI state | `SubmitPage` | React state | No | Monaco Editor의 선택 언어와 현재 소스 코드 |
 | Auth session state | `AuthProvider` | React state + localStorage | Yes | access token, refresh token, token type, 만료 시각, service username, role |

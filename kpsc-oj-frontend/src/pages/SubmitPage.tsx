@@ -13,7 +13,7 @@ import { useMySubmissions } from '../hooks/useMySubmissions'
 import { useProblemDetail } from '../hooks/useProblemDetail'
 import { useSubmissionDetail } from '../hooks/useSubmissionDetail'
 import type { AuthApiError } from '../types/auth'
-import type { SubmissionDetail } from '../types/submission'
+import type { SubmissionDetail, SubmissionSubtaskResult } from '../types/submission'
 import type {
   CreateSubmissionResponseDto,
   SubmissionLanguageDto,
@@ -86,6 +86,14 @@ function formatScorePercentage(scorePercentage: number | null): string {
   return scorePercentage === null ? '점수 산정 전' : `${scorePercentage}%`
 }
 
+function formatSubmissionScore(submissionDetail: SubmissionDetail): string {
+  if (submissionDetail.totalScore !== null) {
+    return `${submissionDetail.totalScore}점`
+  }
+
+  return formatScorePercentage(submissionDetail.scorePercentage)
+}
+
 function getProblemPanelTabClassName(isActive: boolean): string {
   return [
     'border-b-2 px-1 py-4 text-sm font-bold transition',
@@ -97,6 +105,37 @@ function getProblemPanelTabClassName(isActive: boolean): string {
 
 function getSubmissionDiagnosticMessage(submissionDetail: SubmissionDetail): string | null {
   return submissionDetail.compileErrorMessage ?? submissionDetail.runtimeErrorMessage
+}
+
+function SubtaskResultList({
+  subtaskResults,
+}: {
+  subtaskResults: SubmissionSubtaskResult[]
+}) {
+  if (subtaskResults.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mt-3 grid gap-2">
+      {subtaskResults.map((subtaskResult) => (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2"
+          key={subtaskResult.order}
+        >
+          <div className="min-w-0">
+            <p className="truncate text-xs font-black text-slate-700">
+              Subtask {subtaskResult.order}. {subtaskResult.title}
+            </p>
+            <p className="mt-0.5 text-xs font-semibold text-slate-500">
+              {subtaskResult.score} / {subtaskResult.maxScore}점
+            </p>
+          </div>
+          <SubmissionStatusBadge status={subtaskResult.status} />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function SubmitPage() {
@@ -219,6 +258,9 @@ export function SubmitPage() {
                   <Badge tone="blue">{problem.tag}</Badge>
                   <Badge>{problem.timeLimitSeconds}s</Badge>
                   <Badge>{problem.memoryLimitMegabytes}MB</Badge>
+                  {problem.subtasks.length > 0 ? (
+                    <Badge tone="amber">서브테스크 {problem.subtasks.length}개</Badge>
+                  ) : null}
                 </div>
 
                 <div className="border-b border-slate-100 pb-6">
@@ -245,6 +287,32 @@ export function SubmitPage() {
                     ))}
                   </div>
                 </div>
+
+                {problem.subtasks.length > 0 ? (
+                  <div className="mt-6 border-t border-slate-100 pt-6">
+                    <h3 className="text-base font-black text-slate-950">서브테스크</h3>
+                    <div className="mt-4 grid gap-3">
+                      {problem.subtasks.map((subtask) => (
+                        <article
+                          className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3"
+                          key={subtask.order}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <h4 className="text-sm font-black text-slate-800">
+                                {subtask.order}. {subtask.title}
+                              </h4>
+                              <p className="mt-1 text-xs font-semibold text-slate-500">
+                                실제 채점 테스트 {subtask.testCases.length}개
+                              </p>
+                            </div>
+                            <Badge tone="amber">{subtask.score}점</Badge>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </>
             ) : (
               <ProblemSubmissionHistory
@@ -320,7 +388,7 @@ export function SubmitPage() {
                       : isPolling
                         ? '채점이 진행 중입니다.'
                         : submissionDetail
-                          ? formatScorePercentage(submissionDetail.scorePercentage)
+                          ? formatSubmissionScore(submissionDetail)
                           : '상세 결과 대기 중'}
                   </p>
                 ) : null}
@@ -338,15 +406,17 @@ export function SubmitPage() {
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <SubmissionStatusBadge status={submissionDetail.status} />
                   <span className="text-xs font-bold text-slate-500">
-                    {formatScorePercentage(submissionDetail.scorePercentage)}
+                    {formatSubmissionScore(submissionDetail)}
                   </span>
                   <span className="text-xs font-bold text-slate-400">
                     {getLanguageLabel(submissionDetail.language)}
                   </span>
                 </div>
 
+                <SubtaskResultList subtaskResults={submissionDetail.subtaskResults} />
+
                 {submissionDiagnosticMessage ? (
-                  <pre className="mb-3 max-h-24 overflow-auto rounded-md border border-rose-100 bg-rose-50 p-3 text-xs text-rose-800">
+                  <pre className="mb-3 mt-3 max-h-24 overflow-auto rounded-md border border-rose-100 bg-rose-50 p-3 text-xs text-rose-800">
                     {submissionDiagnosticMessage}
                   </pre>
                 ) : null}

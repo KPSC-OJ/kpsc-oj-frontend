@@ -1,3 +1,15 @@
+export type ProblemSubtaskTestCaseRequestDto = {
+  input: string
+  output: string
+}
+
+export type ProblemSubtaskRequestDto = {
+  order: number
+  title: string
+  score: number
+  testCases: ProblemSubtaskTestCaseRequestDto[]
+}
+
 export type ProblemMutationRequestDto = {
   title: string
   tag: string
@@ -9,6 +21,7 @@ export type ProblemMutationRequestDto = {
   exampleOutputs: string[]
   actualTestCaseInputs: string[]
   actualTestCaseOutputs: string[]
+  subtasks?: ProblemSubtaskRequestDto[]
 }
 
 export type CreateProblemRequestDto = ProblemMutationRequestDto & {
@@ -55,6 +68,17 @@ export type ProblemExampleTestCaseDto = {
   output: string
 }
 
+export type ProblemSubtaskTestCaseMetadataDto = {
+  order: number
+}
+
+export type ProblemSubtaskDto = {
+  order: number
+  title: string
+  score: number
+  testCases: ProblemSubtaskTestCaseMetadataDto[]
+}
+
 export type ProblemDetailResponseDto = {
   problemNumber: number
   title: string
@@ -63,6 +87,20 @@ export type ProblemDetailResponseDto = {
   memoryLimitMegabytes: number
   statementMarkdown: string
   exampleTestCases: ProblemExampleTestCaseDto[]
+  subtasks: ProblemSubtaskDto[]
+}
+
+export type ProblemSubtaskTestCaseDefinitionDto = {
+  order: number
+  input: string
+  output: string
+}
+
+export type ProblemSubtaskDefinitionDto = {
+  order: number
+  title: string
+  score: number
+  testCases: ProblemSubtaskTestCaseDefinitionDto[]
 }
 
 export type ProblemDefinitionResponseDto = {
@@ -78,4 +116,5 @@ export type ProblemDefinitionResponseDto = {
   exampleOutputs: string[]
   actualTestCaseInputs: string[]
   actualTestCaseOutputs: string[]
+  subtasks: ProblemSubtaskDefinitionDto[]
 }

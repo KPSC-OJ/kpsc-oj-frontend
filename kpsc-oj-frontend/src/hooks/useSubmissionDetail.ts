@@ -20,7 +20,15 @@ function mapSubmissionDetailResponse(
     scorePercentage: responseDto.scorePercentage ?? null,
     sourceCode: responseDto.sourceCode,
     status: responseDto.status,
+    subtaskResults: (responseDto.subtaskResults ?? []).map((subtaskResultDto) => ({
+      maxScore: subtaskResultDto.maxScore,
+      order: subtaskResultDto.order,
+      score: subtaskResultDto.score,
+      status: subtaskResultDto.status,
+      title: subtaskResultDto.title,
+    })),
     submittedAt: responseDto.submittedAt,
+    totalScore: responseDto.totalScore ?? null,
   }
 }
 

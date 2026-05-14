@@ -15,6 +15,14 @@ function mapProblemDetailResponse(responseDto: ProblemDetailResponseDto): Proble
     memoryLimitMegabytes: responseDto.memoryLimitMegabytes,
     problemNumber: responseDto.problemNumber,
     statementMarkdown: responseDto.statementMarkdown,
+    subtasks: (responseDto.subtasks ?? []).map((subtaskDto) => ({
+      order: subtaskDto.order,
+      score: subtaskDto.score,
+      testCases: subtaskDto.testCases.map((testCaseDto) => ({
+        order: testCaseDto.order,
+      })),
+      title: subtaskDto.title,
+    })),
     tag: responseDto.tag,
     timeLimitSeconds: responseDto.timeLimitSeconds,
     title: responseDto.title,

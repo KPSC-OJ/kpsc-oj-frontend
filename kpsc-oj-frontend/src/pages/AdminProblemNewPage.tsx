@@ -7,7 +7,7 @@ export function AdminProblemNewPage(): ReactElement {
 
   return (
     <ProblemDefinitionForm
-      description="문제 본문, 제한 조건, 예시 정답 코드, 선택 checker, 예제와 실제 채점 테스트 케이스를 등록합니다."
+      description="문제 본문, 제한 조건, 예시 정답 코드, 선택 checker, 예제와 일반/서브테스크 채점 테스트 케이스를 등록합니다."
       eyebrow="Admin"
       forbiddenErrorMessage="문제 생성 권한이 없습니다."
       onSubmit={createProblemWithCurrentSession}

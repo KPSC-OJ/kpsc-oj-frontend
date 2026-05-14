@@ -7,7 +7,7 @@
 - 전역 레이아웃 단위: `components/layout`은 모든 layout에서 공유하는 SiteHeader, SiteFooter를 담당한다.
 - 인증 단위: `components/auth`는 Google Identity Services 버튼처럼 인증 UI 표시와 SDK script 경계를 담당한다.
 - 라우트 보호 단위: `components/auth/ProtectedRoute.tsx`는 인증 세션과 필요한 role이 있는 화면의 진입 경계를 담당한다.
-- 기능 전용 단위: `components/problem`, `components/submission`은 문제/제출 표시 책임만 가진다. 문제 정의 입력처럼 생성/수정 화면이 공유하는 폼 UI도 problem 기능 컴포넌트가 소유한다.
+- 기능 전용 단위: `components/problem`, `components/submission`은 문제/제출 표시 책임만 가진다. 문제 정의 입력과 서브테스크 입력처럼 생성/수정 화면이 공유하는 폼 UI도 problem 기능 컴포넌트가 소유한다.
 - Layout 단위: `layouts`는 라우트별 화면 구조와 내비게이션을 담당한다.
 - Page 단위: `pages`는 라우트 파라미터 처리, hook 호출, 컴포넌트 조립을 담당한다.
 - Hook 단위: `hooks`는 page에서 필요한 비동기 유스케이스와 service 호출을 캡슐화한다.
@@ -35,7 +35,7 @@
 | `ProblemExampleBlock` | problem | label, value | 문제 예제 입출력 원문 표시와 클립보드 복사 버튼 |
 | `ProblemTable` | problem | `ProblemListItem[]` | 문제 목록 테이블과 본인 출제 문제의 수정 진입 표시 |
 | `CheckerGuide` | problem | none | 커스텀 checker 사용을 선택한 출제자에게 C++17 checker 실행 규약, 템플릿, 확인 목록 표시 |
-| `ProblemDefinitionForm` | problem | initial problem definition, submit callback | 문제 생성/수정 공용 입력 폼과 client-side validation |
+| `ProblemDefinitionForm` | problem | initial problem definition, submit callback | 문제 생성/수정 공용 입력 폼, 일반/서브테스크 테스트 케이스 입력, client-side validation |
 | `ProblemSubmissionHistory` | submission | submission page state, pagination callback | 제출 작업 화면에서 현재 문제로 필터링된 내 제출 기록 표시 |
 | `SubmissionStatusBadge` | submission | `SubmissionStatus` | 제출 상태 색상 매핑 |
 
@@ -52,8 +52,10 @@
 - 문제 조회/생성/수정 API 호출은 `Page -> problem hook -> auth store token refresh -> problemService -> Backend API` 흐름을 따른다.
 - 제출 화면의 문제 본문은 `MarkdownContent`를 통해 Markdown과 `$...$`, `$$...$$` LaTeX 수식을 렌더링하고, `SubmitPage`는 Markdown/수식 파싱 세부사항을 직접 갖지 않는다.
 - 제출 화면의 공개 예제 입출력은 `ProblemExampleBlock`이 표시하며, 각 Input/Output 블록은 브라우저 Clipboard API 또는 textarea fallback으로 원문 복사를 제공한다.
+- 제출 화면의 서브테스크 메타데이터는 `SubmitPage`가 `useProblemDetail` view model에서 받아 제목, 배점, 비공개 테스트 케이스 개수만 표시한다.
 - 문제 생성/수정 폼의 optional checker code는 request DTO의 `checkerCode`로만 전달한다. 커스텀 checker를 선택하지 않으면 `checkerCode=null`을 전달해 기본 출력 비교를 사용한다.
 - 문제 생성/수정 폼은 커스텀 checker 사용 체크박스를 제공하고, 선택한 경우에만 `CheckerGuide`와 코드 입력란을 표시한다. checker 컴파일 가능 여부와 최종 유효성은 백엔드와 judge가 검증한다.
+- 문제 생성/수정 폼은 서브테스크 사용 체크박스를 제공한다. 체크하지 않으면 `actualTestCaseInputs`/`actualTestCaseOutputs`를 전송하고, 체크하면 일반 실제 테스트 케이스 배열을 비운 뒤 `subtasks[].testCases`를 전송한다.
 - 제출 조회/생성/상세 API 호출은 `Page -> submission hook -> auth store token refresh -> submissionService -> Backend API` 흐름을 따른다.
 - 제출 작업 화면의 `내 제출` 탭은 `SubmitPage`가 보유한 탭/page/refresh 상태를 `ProblemSubmissionHistory`에 props로 전달하고, 컴포넌트는 API 호출 없이 목록 표시와 pagination 버튼만 담당한다.
-- 제출 생성 후 상세 결과는 `useSubmissionDetail`이 `SubmissionDetail` view model로 변환하며, 채점 진행 중 상태에서는 polling한다.
+- 제출 생성 후 상세 결과는 `useSubmissionDetail`이 `SubmissionDetail` view model로 변환하며, 채점 진행 중 상태에서는 polling한다. 서브테스크 결과가 있으면 `SubmitPage`가 `subtaskResults`의 상태와 점수를 표시한다.

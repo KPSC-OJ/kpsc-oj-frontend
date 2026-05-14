@@ -31,14 +31,24 @@ export type MySubmissionListResponseDto = {
   submissions: MySubmissionListItemDto[]
 }
 
+export type SubmissionSubtaskResultResponseDto = {
+  order: number
+  title: string
+  status: string
+  score: number
+  maxScore: number
+}
+
 export type SubmissionDetailResponseDto = {
   id: string
   problemNumber: number
   language: SubmissionLanguageDto
   status: string
   scorePercentage?: number | null
+  totalScore?: number | null
   submittedAt: string
   sourceCode: string
   compileErrorMessage?: string | null
   runtimeErrorMessage?: string | null
+  subtaskResults: SubmissionSubtaskResultResponseDto[]
 }

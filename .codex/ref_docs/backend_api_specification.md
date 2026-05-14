@@ -176,6 +176,7 @@
   - `subtasks[].order`: number, required, 같은 문제 안에서 고유한 서브테스크 순서.
   - `subtasks[].title`: string, required, 서브테스크 제목.
   - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, required, 이 서브테스크가 점수를 받기 전에 `PASSED`여야 하는 같은 문제의 서브테스크 순서 목록. 없으면 빈 배열.
   - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 메타데이터. 입력/출력 본문은 포함하지 않음.
   - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
 - Status codes:
@@ -212,6 +213,7 @@
   - `subtasks[].order`: number, required, 같은 문제 안에서 고유한 서브테스크 순서.
   - `subtasks[].title`: string, required, 서브테스크 제목.
   - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, required, 이 서브테스크가 점수를 받기 전에 `PASSED`여야 하는 같은 문제의 서브테스크 순서 목록. 없으면 빈 배열.
   - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 목록.
   - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
   - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
@@ -249,9 +251,42 @@
   - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 문제 안에서 고유한 양의 정수.
   - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
   - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, optional, 같은 문제 안에서 먼저 `PASSED`여야 하는 서브테스크 order 목록. 자기 자신, 존재하지 않는 order, 순환 dependency는 허용하지 않음.
   - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
   - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
   - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
+- Request example:
+```json
+{
+  "title": "Subtask Problem",
+  "tag": "implementation",
+  "timeLimitSeconds": 1,
+  "memoryLimitMegabytes": 128,
+  "statementMarkdown": "# Problem",
+  "checkerCode": null,
+  "referenceSolutionCode": "#include <bits/stdc++.h>\nint main() { return 0; }\n",
+  "exampleInputs": ["1 2"],
+  "exampleOutputs": ["3"],
+  "actualTestCaseInputs": [],
+  "actualTestCaseOutputs": [],
+  "subtasks": [
+    {
+      "order": 1,
+      "title": "base",
+      "score": 40,
+      "prerequisiteSubtaskOrders": [],
+      "testCases": [{"input": "1 2", "output": "3"}]
+    },
+    {
+      "order": 2,
+      "title": "dependent",
+      "score": 60,
+      "prerequisiteSubtaskOrders": [1],
+      "testCases": [{"input": "10 20", "output": "30"}]
+    }
+  ]
+}
+```
 - Response body:
   - `id`: string, required, 생성된 문제 UUID.
   - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호. 첫 문제는 `1000`이며 이후 문제 생성 순서대로 1씩 증가.
@@ -269,7 +304,7 @@
   - 403: 인증 계정이 관리자 권한이 아님.
   - 503: judge 서버 설정 누락, 연결 실패, 인증 실패, 또는 응답 매핑 실패로 예시 정답 코드 사전 채점을 완료하지 못함.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 빈 reference solution code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 빈 reference solution code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 자기 자신/존재하지 않는/순환 prerequisite, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성 권한이 없음.
   - `PROBLEM_VERIFICATION_FAILED`: 예시 정답 코드가 실제 채점 테스트 케이스 전체를 통과하지 못함.
@@ -296,6 +331,7 @@
   - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 문제 안에서 고유한 양의 정수.
   - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
   - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, optional, 같은 문제 안에서 먼저 `PASSED`여야 하는 서브테스크 order 목록. 자기 자신, 존재하지 않는 order, 순환 dependency는 허용하지 않음.
   - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
   - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
   - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
@@ -316,7 +352,7 @@
   - 403: 인증 계정이 해당 문제 생성자가 아님.
   - 404: 해당 문제 번호가 존재하지 않음.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 자기 자신/존재하지 않는/순환 prerequisite, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성자가 아니므로 수정 권한이 없음.
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
@@ -395,11 +431,54 @@
   - `compileErrorMessage`: string, optional, 컴파일 오류 메시지. `status=COMPILE_ERROR`일 때 사용하며 없으면 null.
   - `runtimeErrorMessage`: string, optional, 런타임 오류 메시지. `status=RUNTIME_ERROR`일 때 사용하며 없으면 null.
   - `subtaskResults`: array, required, 서브테스크별 채점 결과. 일반 문제 또는 채점 전이면 빈 배열.
-  - `subtaskResults[].order`: number, required, 서브테스크 순서.
+  - `subtaskResults[].subtaskOrder`: number, required, 서브테스크 순서.
   - `subtaskResults[].title`: string, required, 서브테스크 제목.
-  - `subtaskResults[].status`: string, required, 서브테스크 결과. `ACCEPTED`, `FAILED`.
-  - `subtaskResults[].score`: number, required, 해당 서브테스크에서 획득한 점수.
+  - `subtaskResults[].status`: string, required, 서브테스크 결과. `PASSED`, `FAILED`, `BLOCKED`.
+  - `subtaskResults[].earnedScore`: number, required, 해당 서브테스크에서 획득한 점수. `PASSED`이면 `maxScore`, `FAILED` 또는 `BLOCKED`이면 `0`.
   - `subtaskResults[].maxScore`: number, required, 해당 서브테스크의 최대 점수.
+  - `subtaskResults[].passedTestCaseCount`: number, required, 서브테스크 내부 HIDDEN 채점 대상 테스트 케이스 중 통과한 개수. EXAMPLE은 제외.
+  - `subtaskResults[].totalTestCaseCount`: number, required, 서브테스크 내부 HIDDEN 채점 대상 테스트 케이스 전체 개수. EXAMPLE은 제외.
+  - `subtaskResults[].failedReason`: string, optional, 자기 테스트케이스 실패 또는 선행 서브테스크 차단 사유. 없으면 null.
+  - `subtaskResults[].prerequisiteSubtaskOrders`: number array, required, 이 서브테스크가 요구한 선행 서브테스크 순서 목록.
+- Response example:
+```json
+{
+  "id": "00000000-0000-0000-0000-000000000001",
+  "problemNumber": 1000,
+  "language": "cpp17",
+  "status": "WRONG_ANSWER",
+  "scorePercentage": 0.0,
+  "totalScore": 0.0,
+  "submittedAt": "2026-05-14T00:00:00Z",
+  "sourceCode": "#include <bits/stdc++.h>\nint main() { return 0; }\n",
+  "compileErrorMessage": null,
+  "runtimeErrorMessage": null,
+  "subtaskResults": [
+    {
+      "subtaskOrder": 1,
+      "title": "base",
+      "status": "FAILED",
+      "earnedScore": 0.0,
+      "maxScore": 40.0,
+      "passedTestCaseCount": 0,
+      "totalTestCaseCount": 1,
+      "failedReason": "Test case 1 failed: WRONG_ANSWER.",
+      "prerequisiteSubtaskOrders": []
+    },
+    {
+      "subtaskOrder": 2,
+      "title": "dependent",
+      "status": "BLOCKED",
+      "earnedScore": 0.0,
+      "maxScore": 60.0,
+      "passedTestCaseCount": 1,
+      "totalTestCaseCount": 1,
+      "failedReason": "Prerequisite subtask 1 is not PASSED.",
+      "prerequisiteSubtaskOrders": [1]
+    }
+  ]
+}
+```
 - Status codes:
   - 200: 제출 상세 조회 성공.
   - 400: `submissionId` path parameter가 UUID 형식이 아님.
@@ -536,6 +615,7 @@
   - `subtasks[index].order`: number, optional, 서브테스크 순서. 하나 이상의 서브테스크를 보내면 전체 score 합이 100이어야 한다.
   - `subtasks[index].title`: string, optional, 서브테스크 제목.
   - `subtasks[index].score`: number, optional, 서브테스크 배점.
+  - `subtasks[index].prerequisiteSubtaskOrdersText`: string, optional, 쉼표로 구분한 선행 서브테스크 order 목록.
   - `subtasks[index].testCaseInputs[index]`: string, optional, 해당 서브테스크의 실제 채점 입력.
   - `subtasks[index].testCaseOutputs[index]`: string, optional, 해당 서브테스크의 실제 채점 출력.
   - `_csrf`: string, required, Spring Security CSRF token.
@@ -583,6 +663,7 @@
   - `subtasks[index].order`: number, optional, 서브테스크 순서. 하나 이상의 서브테스크를 보내면 기존 서브테스크와 HIDDEN 테스트 케이스를 요청 내용으로 교체한다.
   - `subtasks[index].title`: string, optional, 서브테스크 제목.
   - `subtasks[index].score`: number, optional, 서브테스크 배점.
+  - `subtasks[index].prerequisiteSubtaskOrdersText`: string, optional, 쉼표로 구분한 선행 서브테스크 order 목록.
   - `subtasks[index].testCaseInputs[index]`: string, optional, 해당 서브테스크의 실제 채점 입력.
   - `subtasks[index].testCaseOutputs[index]`: string, optional, 해당 서브테스크의 실제 채점 출력.
   - `_csrf`: string, required, Spring Security CSRF token.
@@ -621,8 +702,10 @@
   - `failed_test_case` -> 첫 실패 테스트 케이스 상태에 따라 `WRONG_ANSWER`, `RUNTIME_ERROR`, `TIME_LIMIT_EXCEEDED`, `MEMORY_LIMIT_EXCEEDED`.
 - subtask scoring:
   - judge는 테스트 케이스 단위 결과만 반환하고 서브테스크 점수 계산을 하지 않는다.
-  - 백엔드는 HIDDEN 테스트 케이스 결과를 `problem_test_cases.subtask_id` 기준으로 그룹화한다.
-  - 한 서브테스크의 모든 HIDDEN 테스트 케이스가 `passed`이면 해당 `problem_subtasks.score`를 획득하고, 하나라도 실패하거나 결과가 누락되면 0점을 획득한다.
+  - 백엔드는 EXAMPLE 테스트 케이스를 제외하고 HIDDEN 테스트 케이스 결과를 `problem_test_cases.subtask_id` 기준으로 그룹화한다.
+  - 한 서브테스크의 모든 HIDDEN 테스트 케이스가 `passed`이고 `problem_subtask_prerequisites`에 정의된 모든 선행 서브테스크가 실제 `PASSED`이면 해당 `problem_subtasks.score`를 획득한다.
+  - 자기 HIDDEN 테스트 케이스 중 하나라도 실패하거나 결과가 누락되면 서브테스크 결과는 `FAILED`이고 0점을 획득한다.
+  - 자기 HIDDEN 테스트 케이스는 모두 통과했지만 선행 서브테스크가 `FAILED` 또는 `BLOCKED`이면 서브테스크 결과는 `BLOCKED`이고 0점을 획득한다.
   - 전체 점수는 획득한 서브테스크 점수 합이며 `submissions.score_percentage`에 저장한다.
   - 전체 점수가 100이면 `ACCEPTED`, 0보다 크고 100보다 작으면 `PARTIAL_ACCEPTED`, 0이면 첫 실패 테스트 케이스 상태를 대표 실패 상태로 사용한다.
 - 문제 생성 시 저장된 `checkerCode`는 judge 요청의 `checker_code`로 전달한다. 값이 null이면 judge 기본 출력 비교를 사용한다.

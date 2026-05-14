@@ -305,6 +305,12 @@ export function SubmitPage() {
                               <p className="mt-1 text-xs font-semibold text-slate-500">
                                 실제 채점 테스트 {subtask.testCases.length}개
                               </p>
+                              {subtask.prerequisiteSubtaskOrders.length > 0 ? (
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                  선행 서브테스크{' '}
+                                  {subtask.prerequisiteSubtaskOrders.join(', ')}
+                                </p>
+                              ) : null}
                             </div>
                             <Badge tone="amber">{subtask.score}점</Badge>
                           </div>

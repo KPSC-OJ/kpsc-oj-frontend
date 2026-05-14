@@ -18,16 +18,19 @@ function mapProblemDefinitionResponse(
     memoryLimitMegabytes: responseDto.memoryLimitMegabytes,
     problemNumber: responseDto.problemNumber,
     statementMarkdown: responseDto.statementMarkdown,
-    subtasks: (responseDto.subtasks ?? []).map((subtaskDto) => ({
-      order: subtaskDto.order,
-      score: subtaskDto.score,
-      testCases: subtaskDto.testCases.map((testCaseDto) => ({
-        input: testCaseDto.input,
-        order: testCaseDto.order,
-        output: testCaseDto.output,
+    subtasks: [...(responseDto.subtasks ?? [])]
+      .sort((leftSubtask, rightSubtask) => leftSubtask.order - rightSubtask.order)
+      .map((subtaskDto) => ({
+        order: subtaskDto.order,
+        prerequisiteSubtaskOrders: subtaskDto.prerequisiteSubtaskOrders ?? [],
+        score: subtaskDto.score,
+        testCases: subtaskDto.testCases.map((testCaseDto) => ({
+          input: testCaseDto.input,
+          order: testCaseDto.order,
+          output: testCaseDto.output,
+        })),
+        title: subtaskDto.title,
       })),
-      title: subtaskDto.title,
-    })),
     tag: responseDto.tag,
     timeLimitSeconds: responseDto.timeLimitSeconds,
     title: responseDto.title,

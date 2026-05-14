@@ -3,6 +3,7 @@ import { BookOpen, LogIn, LogOut } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { Button, ButtonLink } from '../common/Button'
 import { useAuth } from '../../stores/useAuth'
+import { ThemeModeToggle } from './ThemeModeToggle'
 
 type HeaderNavigationItem = {
   adminOnly?: boolean
@@ -50,6 +51,7 @@ export function SiteHeader(): ReactElement {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeModeToggle />
           {isAuthenticated && session ? (
             <>
               <span className="hidden rounded bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 sm:inline">

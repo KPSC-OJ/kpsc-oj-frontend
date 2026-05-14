@@ -25,6 +25,7 @@ export type ProblemSubtask = {
   order: number
   title: string
   score: number
+  prerequisiteSubtaskOrders: number[]
   testCases: ProblemSubtaskTestCaseMetadata[]
 }
 
@@ -44,6 +45,7 @@ export type ProblemSubtaskDefinition = {
   order: number
   title: string
   score: number
+  prerequisiteSubtaskOrders: number[]
   testCases: ProblemSubtaskTestCaseDefinition[]
 }
 

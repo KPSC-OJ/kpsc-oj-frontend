@@ -15,14 +15,17 @@ function mapProblemDetailResponse(responseDto: ProblemDetailResponseDto): Proble
     memoryLimitMegabytes: responseDto.memoryLimitMegabytes,
     problemNumber: responseDto.problemNumber,
     statementMarkdown: responseDto.statementMarkdown,
-    subtasks: (responseDto.subtasks ?? []).map((subtaskDto) => ({
-      order: subtaskDto.order,
-      score: subtaskDto.score,
-      testCases: subtaskDto.testCases.map((testCaseDto) => ({
-        order: testCaseDto.order,
+    subtasks: [...(responseDto.subtasks ?? [])]
+      .sort((leftSubtask, rightSubtask) => leftSubtask.order - rightSubtask.order)
+      .map((subtaskDto) => ({
+        order: subtaskDto.order,
+        prerequisiteSubtaskOrders: subtaskDto.prerequisiteSubtaskOrders ?? [],
+        score: subtaskDto.score,
+        testCases: subtaskDto.testCases.map((testCaseDto) => ({
+          order: testCaseDto.order,
+        })),
+        title: subtaskDto.title,
       })),
-      title: subtaskDto.title,
-    })),
     tag: responseDto.tag,
     timeLimitSeconds: responseDto.timeLimitSeconds,
     title: responseDto.title,

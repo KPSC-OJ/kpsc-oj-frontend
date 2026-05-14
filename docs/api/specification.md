@@ -159,7 +159,7 @@
   - `tag`: string, required, 문제 유형 태그.
   - `timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문. 제출 화면에서는 Markdown과 `$...$`, `$$...$$` LaTeX 수식을 렌더링해 표시한다.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문. 제출 화면에서는 Markdown과 `$...$`, `$$...$$`, `\(...\)`, `\[...\]` LaTeX 수식을 렌더링해 표시한다.
   - `exampleTestCases`: array, required, 공개 예시 테스트 케이스 목록.
   - `exampleTestCases[].order`: number, required, 예시 테스트 케이스 순서.
   - `exampleTestCases[].input`: string, required, 공개 예시 입력 본문. 빈 문자열 가능.
@@ -168,6 +168,7 @@
   - `subtasks[].order`: number, required, 같은 문제 안에서 고유한 서브테스크 순서.
   - `subtasks[].title`: string, required, 서브테스크 제목.
   - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, required, 이 서브테스크가 점수를 받기 전에 통과되어야 하는 같은 문제의 서브테스크 순서 목록. 없으면 빈 배열.
   - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 메타데이터. 입력/출력 본문은 포함하지 않음.
   - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
 - Status codes:
@@ -194,7 +195,7 @@
   - `tag`: string, required, 문제 유형 태그.
   - `timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문. `$...$`, `$$...$$` LaTeX 수식 포함 가능.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문. `$...$`, `$$...$$`, `\(...\)`, `\[...\]` LaTeX 수식 포함 가능.
   - `checkerCode`: string, optional, C++17 checker 코드. judge 기본 출력 비교를 사용하면 null.
   - `exampleInputs`: string array, required, 공개 예시 입력 목록. 각 값 null 불가, 빈 문자열 가능.
   - `exampleOutputs`: string array, required, 공개 예시 출력 목록. `exampleInputs`와 같은 순서와 개수.
@@ -204,6 +205,7 @@
   - `subtasks[].order`: number, required, 같은 문제 안에서 고유한 서브테스크 순서.
   - `subtasks[].title`: string, required, 서브테스크 제목.
   - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, required, 이 서브테스크가 점수를 받기 전에 통과되어야 하는 같은 문제의 서브테스크 순서 목록. 없으면 빈 배열.
   - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 목록.
   - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
   - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
@@ -230,7 +232,7 @@
   - `tag`: string, required, 1-64자, 문제 유형 태그, null 불가.
   - `timeLimitSeconds`: number, required, 양의 정수, 채점 시간 제한 seconds 단위, null 불가.
   - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가. `$...$`, `$$...$$` LaTeX 수식 포함 가능.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가. `$...$`, `$$...$$`, `\(...\)`, `\[...\]` LaTeX 수식 포함 가능.
   - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
   - `referenceSolutionCode`: string, required, C++17 예시 정답 코드. 문제 저장 전에 실제 채점 테스트 케이스 전체로 judge 사전 채점을 수행하며, 저장하지 않고 응답에도 포함하지 않는다. 빈 문자열 또는 공백 문자열 불가.
   - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
@@ -241,6 +243,7 @@
   - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 문제 안에서 고유한 양의 정수.
   - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
   - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, optional, 같은 문제 안에서 먼저 통과되어야 하는 서브테스크 order 목록. 자기 자신, 존재하지 않는 order, 순환 dependency는 허용하지 않음.
   - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
   - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
   - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
@@ -261,7 +264,7 @@
   - 403: 인증 계정이 관리자 권한이 아님.
   - 503: judge 서버 설정 누락, 연결 실패, 인증 실패, 또는 응답 매핑 실패로 예시 정답 코드 사전 채점을 완료하지 못함.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 빈 reference solution code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 빈 reference solution code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 자기 자신/존재하지 않는/순환 prerequisite, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성 권한이 없음.
   - `PROBLEM_VERIFICATION_FAILED`: 예시 정답 코드가 실제 채점 테스트 케이스 전체를 통과하지 못함.
@@ -278,7 +281,7 @@
   - `tag`: string, required, 1-64자, 문제 유형 태그, null 불가.
   - `timeLimitSeconds`: number, required, 양의 정수, 채점 시간 제한 seconds 단위, null 불가.
   - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
-  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가. `$...$`, `$$...$$` LaTeX 수식 포함 가능.
+  - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가. `$...$`, `$$...$$`, `\(...\)`, `\[...\]` LaTeX 수식 포함 가능.
   - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
   - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
   - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.
@@ -288,6 +291,7 @@
   - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 문제 안에서 고유한 양의 정수.
   - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
   - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, optional, 같은 문제 안에서 먼저 통과되어야 하는 서브테스크 order 목록. 자기 자신, 존재하지 않는 order, 순환 dependency는 허용하지 않음.
   - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
   - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
   - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
@@ -308,7 +312,7 @@
   - 403: 인증 계정이 해당 문제 생성자가 아님.
   - 404: 해당 문제 번호가 존재하지 않음.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 자기 자신/존재하지 않는/순환 prerequisite, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성자가 아니므로 수정 권한이 없음.
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.

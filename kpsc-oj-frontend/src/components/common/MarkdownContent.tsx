@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react'
+import { useMemo, type ReactElement, type ReactNode } from 'react'
 import { BlockMath, InlineMath } from 'react-katex'
 import Markdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -8,6 +8,11 @@ import 'katex/dist/katex.min.css'
 type MarkdownContentProps = {
   className?: string
   markdown: string
+}
+
+type MarkdownSegment = {
+  isCode: boolean
+  text: string
 }
 
 function joinClassNames(...classNames: Array<string | undefined>): string {
@@ -44,6 +49,150 @@ function renderBlockMathError(math: string): ReactElement {
       {math}
     </pre>
   )
+}
+
+function splitFencedCodeSegments(markdown: string): MarkdownSegment[] {
+  const lines = markdown.split('\n')
+  const segments: MarkdownSegment[] = []
+  let currentText = ''
+  let isInsideFence = false
+  let fenceCharacter: '`' | '~' | null = null
+  let fenceLength = 0
+
+  function pushCurrentText(isCode: boolean): void {
+    if (!currentText) {
+      return
+    }
+
+    segments.push({ isCode, text: currentText })
+    currentText = ''
+  }
+
+  for (const [index, line] of lines.entries()) {
+    const lineWithEnding = index === lines.length - 1 ? line : `${line}\n`
+    const fenceMatch = line.match(/^[ \t]*(`{3,}|~{3,})/)
+
+    if (!isInsideFence && fenceMatch) {
+      pushCurrentText(false)
+      isInsideFence = true
+      fenceCharacter = fenceMatch[1][0] as '`' | '~'
+      fenceLength = fenceMatch[1].length
+      currentText += lineWithEnding
+
+      continue
+    }
+
+    if (isInsideFence) {
+      currentText += lineWithEnding
+
+      if (
+        fenceCharacter &&
+        fenceMatch &&
+        fenceMatch[1][0] === fenceCharacter &&
+        fenceMatch[1].length >= fenceLength
+      ) {
+        pushCurrentText(true)
+        isInsideFence = false
+        fenceCharacter = null
+        fenceLength = 0
+      }
+
+      continue
+    }
+
+    currentText += lineWithEnding
+  }
+
+  pushCurrentText(isInsideFence)
+
+  return segments
+}
+
+function splitInlineCodeSegments(markdown: string): MarkdownSegment[] {
+  const segments: MarkdownSegment[] = []
+  let currentIndex = 0
+
+  while (currentIndex < markdown.length) {
+    const openingIndex = markdown.indexOf('`', currentIndex)
+
+    if (openingIndex === -1) {
+      segments.push({ isCode: false, text: markdown.slice(currentIndex) })
+
+      break
+    }
+
+    let tickCount = 1
+
+    while (markdown[openingIndex + tickCount] === '`') {
+      tickCount += 1
+    }
+
+    const marker = '`'.repeat(tickCount)
+    const closingIndex = markdown.indexOf(marker, openingIndex + tickCount)
+
+    if (closingIndex === -1) {
+      segments.push({ isCode: false, text: markdown.slice(currentIndex) })
+
+      break
+    }
+
+    if (openingIndex > currentIndex) {
+      segments.push({ isCode: false, text: markdown.slice(currentIndex, openingIndex) })
+    }
+
+    segments.push({
+      isCode: true,
+      text: markdown.slice(openingIndex, closingIndex + tickCount),
+    })
+    currentIndex = closingIndex + tickCount
+  }
+
+  return segments.filter((segment) => segment.text.length > 0)
+}
+
+function normalizeBlockMathContent(math: string): string {
+  return math.trim()
+}
+
+function normalizeStandaloneDoubleDollarMath(markdown: string): string {
+  return markdown.replace(
+    /^([ \t]*)\$\$([^\n]+?)\$\$[ \t]*$/gm,
+    (_match, indent: string, math: string) =>
+      `${indent}$$\n${normalizeBlockMathContent(math)}\n${indent}$$`,
+  )
+}
+
+function normalizeMathDelimitersInText(markdown: string): string {
+  const markdownWithDisplayMath = markdown.replace(
+    /\\\[([\s\S]*?)\\\]/g,
+    (_match, math: string) => `\n$$\n${normalizeBlockMathContent(math)}\n$$\n`,
+  )
+  const markdownWithInlineMath = markdownWithDisplayMath.replace(
+    /\\\(([\s\S]*?)\\\)/g,
+    (_match, math: string) => `$${math.trim()}$`,
+  )
+
+  return normalizeStandaloneDoubleDollarMath(markdownWithInlineMath)
+}
+
+// remark-math only receives dollar-based math nodes, while Markdown escapes
+// backslash bracket delimiters before they can reach KaTeX.
+function normalizeMarkdownMath(markdown: string): string {
+  return splitFencedCodeSegments(markdown)
+    .map((fencedSegment) => {
+      if (fencedSegment.isCode) {
+        return fencedSegment.text
+      }
+
+      return splitInlineCodeSegments(fencedSegment.text)
+        .map((inlineSegment) =>
+          inlineSegment.isCode
+            ? inlineSegment.text
+            : normalizeMathDelimitersInText(inlineSegment.text),
+        )
+        .join('')
+    })
+    .join('')
 }
 
 function isMathDisplayPreNode(node: unknown): boolean {
@@ -171,10 +320,12 @@ export function MarkdownContent({
   className,
   markdown,
 }: MarkdownContentProps): ReactElement {
+  const normalizedMarkdown = useMemo(() => normalizeMarkdownMath(markdown), [markdown])
+
   return (
     <div className={joinClassNames('space-y-4 text-sm text-slate-600', className)}>
       <Markdown components={markdownComponents} remarkPlugins={[remarkGfm, remarkMath]}>
-        {markdown}
+        {normalizedMarkdown}
       </Markdown>
     </div>
   )

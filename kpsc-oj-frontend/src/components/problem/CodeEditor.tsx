@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import Editor from '@monaco-editor/react'
+import { useTheme } from '../../stores/useTheme'
 
 export type CodeEditorLanguage = 'cpp' | 'java' | 'python'
 
@@ -10,6 +11,8 @@ type CodeEditorProps = {
 }
 
 export function CodeEditor({ language, onChange, value }: CodeEditorProps): ReactElement {
+  const { isDarkMode } = useTheme()
+
   return (
     <div className="h-full min-h-0 flex-1 overflow-hidden bg-white">
       <Editor
@@ -33,7 +36,7 @@ export function CodeEditor({ language, onChange, value }: CodeEditorProps): Reac
           tabSize: 4,
           wordWrap: 'on',
         }}
-        theme="vs"
+        theme={isDarkMode ? 'vs-dark' : 'vs'}
         value={value}
       />
     </div>

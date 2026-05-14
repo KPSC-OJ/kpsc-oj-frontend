@@ -7,6 +7,7 @@ export type ProblemSubtaskRequestDto = {
   order: number
   title: string
   score: number
+  prerequisiteSubtaskOrders?: number[]
   testCases: ProblemSubtaskTestCaseRequestDto[]
 }
 
@@ -76,6 +77,7 @@ export type ProblemSubtaskDto = {
   order: number
   title: string
   score: number
+  prerequisiteSubtaskOrders: number[]
   testCases: ProblemSubtaskTestCaseMetadataDto[]
 }
 
@@ -100,6 +102,7 @@ export type ProblemSubtaskDefinitionDto = {
   order: number
   title: string
   score: number
+  prerequisiteSubtaskOrders: number[]
   testCases: ProblemSubtaskTestCaseDefinitionDto[]
 }
 

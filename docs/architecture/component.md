@@ -4,7 +4,7 @@
 
 ## 분리 기준
 - 공통 단위: `components/common`은 특정 도메인에 묶이지 않는 Button, Badge, Card만 담당한다.
-- 전역 레이아웃 단위: `components/layout`은 모든 layout에서 공유하는 SiteHeader, SiteFooter를 담당한다.
+- 전역 레이아웃 단위: `components/layout`은 모든 layout에서 공유하는 SiteHeader, SiteFooter, ThemeModeToggle을 담당한다.
 - 인증 단위: `components/auth`는 Google Identity Services 버튼처럼 인증 UI 표시와 SDK script 경계를 담당한다.
 - 라우트 보호 단위: `components/auth/ProtectedRoute.tsx`는 인증 세션과 필요한 role이 있는 화면의 진입 경계를 담당한다.
 - 기능 전용 단위: `components/problem`, `components/submission`은 문제/제출 표시 책임만 가진다. 문제 정의 입력과 서브테스크 입력처럼 생성/수정 화면이 공유하는 폼 UI도 problem 기능 컴포넌트가 소유한다.
@@ -26,16 +26,17 @@
 | `Button`, `ButtonLink` | common | variant, size, children | 버튼과 라우터 링크 버튼 스타일 |
 | `Badge` | common | tone, children | 상태와 카테고리 라벨 표시 |
 | `Card` | common | children | 반복 패널 프레임 |
-| `MarkdownContent` | common | markdown | 문제 지문 같은 Markdown 본문과 LaTeX 수식을 React 요소로 렌더링 |
+| `MarkdownContent` | common | markdown | 문제 지문 같은 Markdown 본문과 `$...$`, `$$...$$`, `\(...\)`, `\[...\]` LaTeX 수식을 React 요소로 렌더링 |
 | `GoogleIdentityButton` | auth | onCredential | Google Identity Services script 로드와 credential callback 처리 |
 | `ProtectedRoute` | auth | children, requiredRole | 인증 세션이 없으면 로그인 화면으로 이동하고, 필요한 role이 없으면 보호 화면을 조립하지 않음 |
-| `SiteHeader` | layout | none | 전역 브랜드, 주요 내비게이션, 시작 액션 표시 |
+| `SiteHeader` | layout | none | 전역 브랜드, 주요 내비게이션, 테마 토글, 시작 액션 표시 |
 | `SiteFooter` | layout | none | 전역 하단 브랜드와 주요 링크 표시 |
-| `CodeEditor` | problem | language, value, onChange | Monaco 기반 코드 입력 UI |
+| `ThemeModeToggle` | layout | none | 라이트/다크 모드 전환 버튼 |
+| `CodeEditor` | problem | language, value, onChange | Monaco 기반 코드 입력 UI. 전역 테마에 따라 `vs` 또는 `vs-dark`를 사용한다. |
 | `ProblemExampleBlock` | problem | label, value | 문제 예제 입출력 원문 표시와 클립보드 복사 버튼 |
 | `ProblemTable` | problem | `ProblemListItem[]` | 문제 목록 테이블과 본인 출제 문제의 수정 진입 표시 |
 | `CheckerGuide` | problem | none | 커스텀 checker 사용을 선택한 출제자에게 C++17 checker 실행 규약, 템플릿, 확인 목록 표시 |
-| `ProblemDefinitionForm` | problem | initial problem definition, submit callback | 문제 생성/수정 공용 입력 폼, 일반/서브테스크 테스트 케이스 입력, client-side validation |
+| `ProblemDefinitionForm` | problem | initial problem definition, submit callback | 문제 생성/수정 공용 입력 폼, 일반/서브테스크 테스트 케이스와 서브테스크 선행 관계 입력, client-side validation |
 | `ProblemSubmissionHistory` | submission | submission page state, pagination callback | 제출 작업 화면에서 현재 문제로 필터링된 내 제출 기록 표시 |
 | `SubmissionStatusBadge` | submission | `SubmissionStatus` | 제출 상태 색상 매핑 |
 
@@ -43,6 +44,7 @@
 - 컴포넌트 안에서 fetch/axios 호출을 직접 수행하지 않는다.
 - 복잡한 상태 전이는 hook 또는 store action으로 분리한다.
 - API 타입과 UI view model의 변환 위치는 추후 service/data 경계에 둔다.
+- 라이트/다크 테마 상태는 `src/stores/themeStore.tsx`와 `src/stores/themeContext.ts`에서 관리하고, `ThemeModeToggle`과 `CodeEditor`는 `useTheme()`으로 표시 상태만 읽는다.
 - 인증 API 호출, session role 정규화, access token 갱신은 `src/services/authService.ts`와 `src/stores/authStore.tsx`를 통해서만 수행한다. role은 access token payload claim을 우선 확인하고, 없으면 token 응답 또는 저장된 session role을 사용한다.
 - 보호 API를 호출하는 hook은 `requestWithFreshSession()`으로 유효한 access token을 받은 뒤 domain service를 호출한다.
 - Header, AppLayout, ProblemsPage는 auth store의 `isAdmin` 값으로 문제 생성 진입점을 숨긴다.
@@ -50,12 +52,14 @@
 - 로그인 응답의 `requiresSignup` 분기는 `authService`와 auth store 경계에서 처리하고, `LoginPage`는 로그인/회원가입 화면 상태 조립만 담당한다.
 - `LoginPage`는 실제 서비스 사용자를 기준으로 구성하며 backend URL, OAuth client id, raw ID token 입력 같은 개발자용 진단 UI를 표시하지 않는다.
 - 문제 조회/생성/수정 API 호출은 `Page -> problem hook -> auth store token refresh -> problemService -> Backend API` 흐름을 따른다.
-- 제출 화면의 문제 본문은 `MarkdownContent`를 통해 Markdown과 `$...$`, `$$...$$` LaTeX 수식을 렌더링하고, `SubmitPage`는 Markdown/수식 파싱 세부사항을 직접 갖지 않는다.
+- 제출 화면의 문제 본문은 `MarkdownContent`를 통해 Markdown과 `$...$`, `$$...$$`, `\(...\)`, `\[...\]` LaTeX 수식을 렌더링하고, `SubmitPage`는 Markdown/수식 파싱 세부사항을 직접 갖지 않는다.
+- `MarkdownContent`는 Markdown code fence와 inline code를 보존한 뒤 LaTeX delimiter를 정규화한다. `remark-math`가 직접 처리하지 못하는 `\(...\)`와 `\[...\]`, 한 줄짜리 독립 `$$...$$`는 렌더링 직전에 `remark-math`가 인식하는 형태로 변환한다.
 - 제출 화면의 공개 예제 입출력은 `ProblemExampleBlock`이 표시하며, 각 Input/Output 블록은 브라우저 Clipboard API 또는 textarea fallback으로 원문 복사를 제공한다.
-- 제출 화면의 서브테스크 메타데이터는 `SubmitPage`가 `useProblemDetail` view model에서 받아 제목, 배점, 비공개 테스트 케이스 개수만 표시한다.
+- 제출 화면의 서브테스크 메타데이터는 `SubmitPage`가 `useProblemDetail` view model에서 받아 제목, 배점, 비공개 테스트 케이스 개수와 선행 서브테스크 order를 표시한다.
 - 문제 생성/수정 폼의 optional checker code는 request DTO의 `checkerCode`로만 전달한다. 커스텀 checker를 선택하지 않으면 `checkerCode=null`을 전달해 기본 출력 비교를 사용한다.
 - 문제 생성/수정 폼은 커스텀 checker 사용 체크박스를 제공하고, 선택한 경우에만 `CheckerGuide`와 코드 입력란을 표시한다. checker 컴파일 가능 여부와 최종 유효성은 백엔드와 judge가 검증한다.
-- 문제 생성/수정 폼은 서브테스크 사용 체크박스를 제공한다. 체크하지 않으면 `actualTestCaseInputs`/`actualTestCaseOutputs`를 전송하고, 체크하면 일반 실제 테스트 케이스 배열을 비운 뒤 `subtasks[].testCases`를 전송한다.
+- 문제 생성/수정 폼은 서브테스크 사용 체크박스를 제공한다. 체크하지 않으면 `actualTestCaseInputs`/`actualTestCaseOutputs`를 전송하고, 체크하면 일반 실제 테스트 케이스 배열을 비운 뒤 `subtasks[].testCases`와 `subtasks[].prerequisiteSubtaskOrders`를 전송한다.
+- `ProblemDefinitionForm`은 서브테스크 선행 관계 입력을 쉼표 구분 order 문자열로 받고, 요청 DTO 변환 전에 양의 정수, 중복, 자기 참조, 존재하지 않는 order, 순환 관계를 검증한다.
 - 제출 조회/생성/상세 API 호출은 `Page -> submission hook -> auth store token refresh -> submissionService -> Backend API` 흐름을 따른다.
 - 제출 작업 화면의 `내 제출` 탭은 `SubmitPage`가 보유한 탭/page/refresh 상태를 `ProblemSubmissionHistory`에 props로 전달하고, 컴포넌트는 API 호출 없이 목록 표시와 pagination 버튼만 담당한다.
 - 제출 생성 후 상세 결과는 `useSubmissionDetail`이 `SubmissionDetail` view model로 변환하며, 채점 진행 중 상태에서는 polling한다. 서브테스크 결과가 있으면 `SubmitPage`가 `subtaskResults`의 상태와 점수를 표시한다.

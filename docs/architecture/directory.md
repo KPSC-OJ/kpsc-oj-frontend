@@ -7,7 +7,7 @@
 | --- | --- | --- | --- | --- |
 | `kpsc-oj-frontend/src/App.tsx` | file | React Router 라우트 구성 | Routing | layout과 page를 연결한다. |
 | `kpsc-oj-frontend/src/main.tsx` | file | React 앱 진입점 | App bootstrap | `index.css`와 `App`을 로드한다. |
-| `kpsc-oj-frontend/src/index.css` | file | Tailwind import와 전역 HTML 스타일 | Styling | 라이트 모드 기본 전역 스타일만 둔다. |
+| `kpsc-oj-frontend/src/index.css` | file | Tailwind import와 전역 HTML 스타일 | Styling | 기본 전역 스타일과 `data-theme="dark"` 기반 다크 모드 색상 오버라이드를 둔다. |
 | `kpsc-oj-frontend/src/layouts` | directory | 라우트별 화면 경계 | Presentation layout | Public, App, Problem Workspace layout을 포함한다. |
 | `kpsc-oj-frontend/src/layouts/PublicLayout.tsx` | file | 공개 홈 레이아웃 | Presentation layout | 공통 Header/Footer와 outlet을 조립한다. |
 | `kpsc-oj-frontend/src/layouts/AppLayout.tsx` | file | 앱 내부 레이아웃 | Presentation layout | 공통 Header/Footer, 사이드 내비게이션, outlet을 조립한다. |
@@ -24,10 +24,10 @@
 | `kpsc-oj-frontend/src/components/common` | directory | 공통 UI 컴포넌트 | Shared UI | Button, Badge, Card, MarkdownContent를 포함한다. MarkdownContent는 Markdown과 LaTeX 수식 표시를 담당한다. |
 | `kpsc-oj-frontend/src/components/auth` | directory | 인증 UI 컴포넌트 | Auth UI | GoogleIdentityButton을 포함한다. |
 | `kpsc-oj-frontend/src/components/auth/ProtectedRoute.tsx` | file | 인증/role 보호 라우트 경계 | Auth route UI | 로그인 세션이 없는 사용자를 `/login`으로 이동시키고, 필요한 role이 없으면 보호 화면을 조립하지 않는다. |
-| `kpsc-oj-frontend/src/components/layout` | directory | 전역 레이아웃 UI 컴포넌트 | Shared layout UI | SiteHeader, SiteFooter를 포함한다. |
+| `kpsc-oj-frontend/src/components/layout` | directory | 전역 레이아웃 UI 컴포넌트 | Shared layout UI | SiteHeader, SiteFooter, ThemeModeToggle을 포함한다. |
 | `kpsc-oj-frontend/src/components/problem` | directory | 문제 도메인 표시/입력 컴포넌트 | Feature UI | `ProblemTable`, `ProblemExampleBlock`, `ProblemDefinitionForm`, `CheckerGuide`를 포함한다. |
 | `kpsc-oj-frontend/src/components/problem/ProblemExampleBlock.tsx` | file | 예제 입출력 표시 | Feature UI | 제출 화면의 공개 예제 Input/Output 원문과 클립보드 복사 버튼을 표시한다. |
-| `kpsc-oj-frontend/src/components/problem/ProblemDefinitionForm.tsx` | file | 문제 정의 입력 폼 | Feature UI | 문제 생성/수정에서 공유하는 제목, 제한, 본문, checker, 일반/서브테스크 테스트 케이스 입력과 client-side validation을 담당한다. |
+| `kpsc-oj-frontend/src/components/problem/ProblemDefinitionForm.tsx` | file | 문제 정의 입력 폼 | Feature UI | 문제 생성/수정에서 공유하는 제목, 제한, 본문, checker, 일반/서브테스크 테스트 케이스, 서브테스크 선행 관계 입력과 client-side validation을 담당한다. |
 | `kpsc-oj-frontend/src/components/problem/CheckerGuide.tsx` | file | checker 작성 안내 | Feature UI | 커스텀 checker를 선택한 출제자에게 checker 사용 시점, 실행 규약, 템플릿, 작성 전 확인 목록을 표시한다. |
 | `kpsc-oj-frontend/src/components/submission` | directory | 제출 도메인 표시 컴포넌트 | Feature UI | `SubmissionStatusBadge`, `ProblemSubmissionHistory`를 포함한다. |
 | `kpsc-oj-frontend/src/components/submission/ProblemSubmissionHistory.tsx` | file | 문제별 내 제출 기록 표시 | Feature UI | 제출 작업 화면에서 현재 문제의 내 제출 목록, 빈 상태, 오류 상태, pagination UI를 표시한다. |
@@ -43,8 +43,12 @@
 | `kpsc-oj-frontend/src/services` | directory | 백엔드 API client와 service | Service/API boundary | auth API 호출, token refresh API 호출, 공통 JSON/error 처리를 담당한다. |
 | `kpsc-oj-frontend/src/services/problemService.ts` | file | 문제 API service | Service/API boundary | 문제 목록/상세/정의 조회와 문제 생성/수정 API 호출을 담당한다. |
 | `kpsc-oj-frontend/src/services/submissionService.ts` | file | 제출 API service | Service/API boundary | 제출 생성, 내 제출 목록 조회, 제출 상세 조회 API 호출을 담당한다. |
-| `kpsc-oj-frontend/src/stores` | directory | 전역 UI/application state | Store | AuthProvider, auth context, useAuth hook, session role 정규화, access token 갱신 흐름을 포함한다. |
+| `kpsc-oj-frontend/src/components/layout/ThemeModeToggle.tsx` | file | 라이트/다크 모드 전환 버튼 | Shared layout UI | Header에서 전역 theme mode store를 호출해 색상 모드를 전환한다. |
+| `kpsc-oj-frontend/src/stores` | directory | 전역 UI/application state | Store | AuthProvider, auth context, useAuth hook, ThemeProvider, theme context, useTheme hook, session role 정규화, access token 갱신 흐름을 포함한다. |
+| `kpsc-oj-frontend/src/stores/themeContext.ts` | file | 테마 context 계약 | Store contract | theme mode context value와 `ThemeMode` 타입을 정의한다. |
+| `kpsc-oj-frontend/src/stores/themeStore.tsx` | file | 테마 Provider | Store | theme mode localStorage persistence와 document theme attribute 반영을 담당한다. |
+| `kpsc-oj-frontend/src/stores/useTheme.ts` | file | 테마 hook | Store hook | 전역 theme context 접근을 캡슐화한다. |
 | `kpsc-oj-frontend/src/types` | directory | API DTO와 UI-facing 타입 정의 | Type contract | API DTO와 화면 모델을 분리한다. |
-| `kpsc-oj-frontend/src/types/problemApi.ts` | file | 문제 API DTO 타입 | API DTO contract | 문제 목록/상세/정의/생성/수정 request/response DTO, 목록 생성자 식별 필드, optional checker field, 서브테스크 DTO를 정의한다. |
+| `kpsc-oj-frontend/src/types/problemApi.ts` | file | 문제 API DTO 타입 | API DTO contract | 문제 목록/상세/정의/생성/수정 request/response DTO, 목록 생성자 식별 필드, optional checker field, 서브테스크 및 선행 관계 DTO를 정의한다. |
 | `kpsc-oj-frontend/src/types/submissionApi.ts` | file | 제출 API DTO 타입 | API DTO contract | 제출 생성/목록/상세 request/response DTO와 서브테스크 결과 DTO를 정의한다. |
 | `kpsc-oj-frontend/src/assets` | directory | 정적 asset | Static asset | 현재 MVP 라우팅에서는 직접 사용하지 않는다. |

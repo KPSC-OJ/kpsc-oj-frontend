@@ -88,9 +88,17 @@ type TestCaseKind = 'example' | 'actual'
 
 type SubtaskFormRow = {
   id: string
+  prerequisiteSubtaskOrdersText: string
   title: string
   score: string
   testCases: TestCaseFormRow[]
+}
+
+type SubtaskField = 'title' | 'score' | 'prerequisiteSubtaskOrdersText'
+
+type ParsedPrerequisiteOrders = {
+  errorMessage: string | null
+  orders: number[]
 }
 
 const emptyProblemFormState: ProblemFormState = {
@@ -139,6 +147,8 @@ function createSubtaskRow(
 
   return {
     id: `subtask-${subtaskSequence}`,
+    prerequisiteSubtaskOrdersText:
+      subtask?.prerequisiteSubtaskOrders.join(', ') ?? '',
     score: subtask ? String(subtask.score) : '',
     testCases:
       subtask?.testCases.map((testCase) =>
@@ -150,7 +160,9 @@ function createSubtaskRow(
 
 function createSubtaskRows(initialValue?: ProblemDefinitionFormInitialValue): SubtaskFormRow[] {
   if (initialValue?.subtasks?.length) {
-    return initialValue.subtasks.map(createSubtaskRow)
+    return [...initialValue.subtasks]
+      .sort((leftSubtask, rightSubtask) => leftSubtask.order - rightSubtask.order)
+      .map(createSubtaskRow)
   }
 
   return [createSubtaskRow()]
@@ -180,6 +192,115 @@ function parsePositiveInteger(value: string): number | null {
   }
 
   return parsedValue
+}
+
+function parsePrerequisiteSubtaskOrdersText(value: string): ParsedPrerequisiteOrders {
+  if (!value.trim()) {
+    return { errorMessage: null, orders: [] }
+  }
+
+  const orderTexts = value.split(',').map((orderText) => orderText.trim())
+
+  if (orderTexts.some((orderText) => orderText.length === 0)) {
+    return {
+      errorMessage: '선행 서브테스크는 쉼표로 구분한 양의 정수로 입력해야 합니다.',
+      orders: [],
+    }
+  }
+
+  const orders: number[] = []
+
+  for (const orderText of orderTexts) {
+    const parsedOrder = parsePositiveInteger(orderText)
+
+    if (!parsedOrder) {
+      return {
+        errorMessage: '선행 서브테스크는 쉼표로 구분한 양의 정수로 입력해야 합니다.',
+        orders: [],
+      }
+    }
+
+    if (orders.includes(parsedOrder)) {
+      return {
+        errorMessage: '같은 선행 서브테스크를 중복 입력할 수 없습니다.',
+        orders: [],
+      }
+    }
+
+    orders.push(parsedOrder)
+  }
+
+  return { errorMessage: null, orders }
+}
+
+function hasCyclicSubtaskPrerequisites(
+  prerequisiteOrdersByOrder: Map<number, number[]>,
+): boolean {
+  const visitingOrders = new Set<number>()
+  const visitedOrders = new Set<number>()
+
+  function visitSubtask(order: number): boolean {
+    if (visitingOrders.has(order)) {
+      return true
+    }
+
+    if (visitedOrders.has(order)) {
+      return false
+    }
+
+    visitingOrders.add(order)
+
+    for (const prerequisiteOrder of prerequisiteOrdersByOrder.get(order) ?? []) {
+      if (visitSubtask(prerequisiteOrder)) {
+        return true
+      }
+    }
+
+    visitingOrders.delete(order)
+    visitedOrders.add(order)
+
+    return false
+  }
+
+  return Array.from(prerequisiteOrdersByOrder.keys()).some(visitSubtask)
+}
+
+function getSubtaskPrerequisiteValidationMessage(
+  subtasks: SubtaskFormRow[],
+): string | null {
+  const availableOrders = new Set(subtasks.map((_subtask, index) => index + 1))
+  const prerequisiteOrdersByOrder = new Map<number, number[]>()
+
+  for (const [index, subtask] of subtasks.entries()) {
+    const subtaskOrder = index + 1
+    const parsedPrerequisites = parsePrerequisiteSubtaskOrdersText(
+      subtask.prerequisiteSubtaskOrdersText,
+    )
+
+    if (parsedPrerequisites.errorMessage) {
+      return `서브테스크 ${subtaskOrder}: ${parsedPrerequisites.errorMessage}`
+    }
+
+    if (parsedPrerequisites.orders.includes(subtaskOrder)) {
+      return `서브테스크 ${subtaskOrder}는 자기 자신을 선행 서브테스크로 지정할 수 없습니다.`
+    }
+
+    const missingOrder = parsedPrerequisites.orders.find(
+      (prerequisiteOrder) => !availableOrders.has(prerequisiteOrder),
+    )
+
+    if (missingOrder) {
+      return `서브테스크 ${subtaskOrder}의 선행 서브테스크 ${missingOrder}번이 존재하지 않습니다.`
+    }
+
+    prerequisiteOrdersByOrder.set(subtaskOrder, parsedPrerequisites.orders)
+  }
+
+  if (hasCyclicSubtaskPrerequisites(prerequisiteOrdersByOrder)) {
+    return '서브테스크 선행 관계에 순환이 있습니다.'
+  }
+
+  return null
 }
 
 function hasInitialCheckerCode(initialValue?: ProblemDefinitionFormInitialValue): boolean {
@@ -292,6 +413,13 @@ function renderValidationMessage(
     if (subtaskScoreSum !== 100) {
       return '서브테스크 배점 합은 정확히 100이어야 합니다.'
     }
+
+    const prerequisiteValidationMessage =
+      getSubtaskPrerequisiteValidationMessage(subtasks)
+
+    if (prerequisiteValidationMessage) {
+      return prerequisiteValidationMessage
+    }
   }
 
   return null
@@ -388,7 +516,7 @@ function SubtaskEditor({
   onAddTestCase: (subtaskId: string) => void
   onRemove: (subtaskId: string) => void
   onRemoveTestCase: (subtaskId: string, testCaseId: string) => void
-  onUpdate: (subtaskId: string, field: 'title' | 'score', value: string) => void
+  onUpdate: (subtaskId: string, field: SubtaskField, value: string) => void
   onUpdateTestCase: (
     subtaskId: string,
     testCaseId: string,
@@ -409,7 +537,7 @@ function SubtaskEditor({
         <div>
           <h2 className="text-lg font-black text-slate-950">서브테스크</h2>
           <p className="mt-1 text-sm text-slate-500">
-            배점 합이 100이 되도록 작성하고, 각 서브테스크에 실제 채점 테스트 케이스를 배정합니다.
+            배점 합이 100이 되도록 작성하고, 각 서브테스크에 실제 채점 테스트 케이스와 선행 관계를 배정합니다.
           </p>
           <p
             className={[
@@ -466,6 +594,27 @@ function SubtaskEditor({
                   type="number"
                   value={subtask.score}
                 />
+              </label>
+
+              <label className="block md:col-span-2">
+                <span className="text-sm font-bold text-slate-700">
+                  선행 서브테스크 order
+                </span>
+                <input
+                  className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  onChange={(event) =>
+                    onUpdate(
+                      subtask.id,
+                      'prerequisiteSubtaskOrdersText',
+                      event.target.value,
+                    )
+                  }
+                  placeholder="예: 1, 2"
+                  value={subtask.prerequisiteSubtaskOrdersText}
+                />
+                <span className="mt-1 block text-xs text-slate-500">
+                  입력한 서브테스크가 통과되어야 이 서브테스크 점수를 받을 수 있습니다.
+                </span>
               </label>
             </div>
 
@@ -659,7 +808,7 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
 
   function updateSubtask(
     subtaskId: string,
-    field: 'title' | 'score',
+    field: SubtaskField,
     value: string,
   ): void {
     setSubtasks((currentRows) =>
@@ -743,6 +892,9 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
   function createSubtaskRequestDtos(): ProblemSubtaskRequestDto[] {
     return subtasks.map((subtask, index) => ({
       order: index + 1,
+      prerequisiteSubtaskOrders: parsePrerequisiteSubtaskOrdersText(
+        subtask.prerequisiteSubtaskOrdersText,
+      ).orders,
       score: parsePositiveInteger(subtask.score) ?? 0,
       testCases: subtask.testCases.map((testCase) => ({
         input: testCase.input,

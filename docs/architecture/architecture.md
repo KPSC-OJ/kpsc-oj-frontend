@@ -2,7 +2,7 @@
 
 ## 요약
 kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
-현재 구현은 인증, 문제 목록, 문제 상세, 문제 생성/수정, 제출 생성, 제출 상세/채점 결과, 내 제출 목록 화면에서 백엔드 REST API를 호출한다.
+현재 구현은 인증, 문제 목록, 문제 상세/서브테스크 메타데이터, 문제 생성/수정, 제출 생성, 제출 상세/채점 결과, 내 제출 목록 화면에서 백엔드 REST API를 호출한다.
 백엔드 연결을 위해 화면 조립, UI 컴포넌트, service, 상태 저장소 경계를 분리한다.
 
 ## 기본 정보
@@ -10,7 +10,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 - 라우팅: react-router-dom
 - 데이터베이스: 프론트엔드 직접 사용 없음
 - 인증 사용: Google ID token 기반 백엔드 로그인, signup, token refresh, logout, session role 연동
-- 문제/제출 사용: authenticated backend API 연동
+- 문제/제출 사용: authenticated backend API 연동. 문제 상세는 서브테스크 메타데이터를 포함하고, 제출 상세는 서브테스크별 결과를 표시한다.
 - 관리자 문제 생성: `ADMIN` role 세션에만 화면 노출, backend problem creation API 연동
 - 문제 수정: 문제 목록 응답의 생성자 정보로 본인이 출제한 문제에만 수정 진입 노출, backend problem definition API에서 생성자 권한 최종 검증
 - 외부 API 연동: Google Identity Services script, kpsc-oj-backend auth API
@@ -37,8 +37,8 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 - page가 직접 fetch를 호출하지 않도록 `src/services` API 경계를 유지한다.
 
 ## 흐름 메모
-- 문제 데이터 흐름: Page -> Hook -> Problem service -> Backend API
-- 제출 데이터 흐름: Page -> Hook -> Submission service -> Backend API. 제출 생성 후 상세 결과는 `useSubmissionDetail`이 조회하고 진행 중 상태에서는 polling한다.
+- 문제 데이터 흐름: Page -> Hook -> Problem service -> Backend API. 문제 상세/정의 응답의 `subtasks`는 hook에서 UI view model로 변환한다.
+- 제출 데이터 흐름: Page -> Hook -> Submission service -> Backend API. 제출 생성 후 상세 결과는 `useSubmissionDetail`이 조회하고 진행 중 상태에서는 polling하며, `totalScore`와 `subtaskResults`를 결과 패널에 표시한다.
 - 인증 흐름: Google Identity Services 버튼 -> LoginPage -> Auth store -> Auth service -> Backend auth API -> 기존 사용자 세션 저장 또는 최초 로그인 회원가입 대기 -> signup 완료 후 세션 저장
 - API 흐름: Page -> Hook/Store -> Service -> Backend API
 - 저장 흐름: Auth session은 localStorage에 저장하고 access token 만료 전 또는 인증 401 응답 시 refresh token으로 갱신한다. refresh 실패가 인증 실패이면 저장된 세션을 제거한다.
@@ -81,3 +81,4 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | 2026-05-10 | 제출 화면의 문제 지문은 Markdown과 LaTeX 수식으로 렌더링한다. | 문제 본문은 Markdown 문법과 `$...$`, `$$...$$` 수식을 포함할 수 있으므로 풀이 사용자는 원문이 아니라 렌더링된 지문을 봐야 한다. | `SubmitPage`는 `MarkdownContent`를 사용해 `statementMarkdown`을 표시하고, `MarkdownContent`는 `react-katex`로 수식을 렌더링한다. |
 | 2026-05-10 | 문제 생성/수정 폼에 checker 사용 선택과 작성 가이드를 표시한다. | 출제자가 기본 출력 비교와 커스텀 checker 사용 여부를 명확히 구분하고, C++17 checker 실행 규약과 exit code 판정 방식을 프론트에서 확인할 수 있어야 한다. | `ProblemDefinitionForm`은 커스텀 checker 체크박스를 제공하고, 선택한 경우에만 `CheckerGuide`와 checker 코드 입력란을 표시한다. |
 | 2026-05-10 | 제출 화면의 `내 제출` 탭에서 현재 문제의 내 제출 기록을 표시한다. | 풀이 중인 사용자가 별도 제출 기록 페이지로 이동하지 않고 해당 문제의 제출 이력을 확인해야 한다. | `SubmitPage`는 `useMySubmissions`에 `problemNumber` 필터와 refresh key를 전달하고, `ProblemSubmissionHistory`는 목록/빈 상태/pagination 표시만 담당한다. |
+| 2026-05-14 | 서브테스크 문제는 문제 정의 폼과 제출 결과 패널에서 지원한다. | 백엔드가 문제별 선택 서브테스크와 서브테스크별 부분 점수 결과를 API 계약에 추가했기 때문이다. | `ProblemDefinitionForm`은 일반 실제 테스트 케이스와 서브테스크 테스트 케이스 중 하나를 전송하고, `SubmitPage`는 문제 서브테스크 메타데이터와 제출별 `subtaskResults`를 표시한다. |

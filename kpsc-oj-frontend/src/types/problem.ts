@@ -17,9 +17,34 @@ export type ProblemExample = {
   output: string
 }
 
+export type ProblemSubtaskTestCaseMetadata = {
+  order: number
+}
+
+export type ProblemSubtask = {
+  order: number
+  title: string
+  score: number
+  testCases: ProblemSubtaskTestCaseMetadata[]
+}
+
 export type ProblemDetail = ProblemSummary & {
   statementMarkdown: string
   exampleTestCases: ProblemExample[]
+  subtasks: ProblemSubtask[]
+}
+
+export type ProblemSubtaskTestCaseDefinition = {
+  order: number
+  input: string
+  output: string
+}
+
+export type ProblemSubtaskDefinition = {
+  order: number
+  title: string
+  score: number
+  testCases: ProblemSubtaskTestCaseDefinition[]
 }
 
 export type ProblemDefinition = ProblemSummary & {
@@ -30,6 +55,7 @@ export type ProblemDefinition = ProblemSummary & {
   exampleOutputs: string[]
   actualTestCaseInputs: string[]
   actualTestCaseOutputs: string[]
+  subtasks: ProblemSubtaskDefinition[]
 }
 
 export type ProblemPage = {

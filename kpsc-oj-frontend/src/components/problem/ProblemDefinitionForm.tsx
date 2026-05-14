@@ -12,8 +12,10 @@ import type { AuthApiError } from '../../types/auth'
 import type {
   CreateProblemRequestDto,
   ProblemMutationRequestDto,
+  ProblemSubtaskRequestDto,
   UpdateProblemRequestDto,
 } from '../../types/problemApi'
+import type { ProblemSubtaskDefinition } from '../../types/problem'
 
 export type ProblemDefinitionFormInitialValue = {
   checkerCode?: string | null
@@ -26,6 +28,7 @@ export type ProblemDefinitionFormInitialValue = {
   exampleOutputs: string[]
   actualTestCaseInputs: string[]
   actualTestCaseOutputs: string[]
+  subtasks?: ProblemSubtaskDefinition[]
 }
 
 export type ProblemDefinitionFormSaveResult = {
@@ -83,6 +86,13 @@ type TestCaseFormRow = {
 
 type TestCaseKind = 'example' | 'actual'
 
+type SubtaskFormRow = {
+  id: string
+  title: string
+  score: string
+  testCases: TestCaseFormRow[]
+}
+
 const emptyProblemFormState: ProblemFormState = {
   checkerCode: '',
   memoryLimitMegabytes: '128',
@@ -94,6 +104,7 @@ const emptyProblemFormState: ProblemFormState = {
 }
 
 let testCaseSequence = 0
+let subtaskSequence = 0
 
 function createTestCaseRow(
   kind: TestCaseKind,
@@ -119,6 +130,30 @@ function createRowsFromValues(
   return Array.from({ length: rowCount }, (_, index) =>
     createTestCaseRow(kind, inputs[index] ?? '', outputs[index] ?? ''),
   )
+}
+
+function createSubtaskRow(
+  subtask?: ProblemSubtaskDefinition,
+): SubtaskFormRow {
+  subtaskSequence += 1
+
+  return {
+    id: `subtask-${subtaskSequence}`,
+    score: subtask ? String(subtask.score) : '',
+    testCases:
+      subtask?.testCases.map((testCase) =>
+        createTestCaseRow('actual', testCase.input, testCase.output),
+      ) ?? [createTestCaseRow('actual')],
+    title: subtask?.title ?? '',
+  }
+}
+
+function createSubtaskRows(initialValue?: ProblemDefinitionFormInitialValue): SubtaskFormRow[] {
+  if (initialValue?.subtasks?.length) {
+    return initialValue.subtasks.map(createSubtaskRow)
+  }
+
+  return [createSubtaskRow()]
 }
 
 function createFormState(initialValue?: ProblemDefinitionFormInitialValue): ProblemFormState {
@@ -149,6 +184,10 @@ function parsePositiveInteger(value: string): number | null {
 
 function hasInitialCheckerCode(initialValue?: ProblemDefinitionFormInitialValue): boolean {
   return Boolean(initialValue?.checkerCode?.trim())
+}
+
+function hasInitialSubtasks(initialValue?: ProblemDefinitionFormInitialValue): boolean {
+  return Boolean(initialValue?.subtasks?.length)
 }
 
 function getSubmitErrorMessage(
@@ -188,6 +227,8 @@ function getSubmitErrorMessage(
 function renderValidationMessage(
   formState: ProblemFormState,
   requiresReferenceSolution: boolean,
+  usesSubtasks: boolean,
+  subtasks: SubtaskFormRow[],
   timeLimitSeconds: number | null,
   memoryLimitMegabytes: number | null,
 ): string | null {
@@ -221,6 +262,36 @@ function renderValidationMessage(
 
   if (requiresReferenceSolution && !formState.referenceSolutionCode.trim()) {
     return '예시 정답 C++17 코드를 입력해야 합니다.'
+  }
+
+  if (usesSubtasks) {
+    const subtaskScoreSum = subtasks.reduce((sum, subtask) => {
+      const parsedScore = parsePositiveInteger(subtask.score)
+
+      return parsedScore === null ? sum : sum + parsedScore
+    }, 0)
+
+    for (const [index, subtask] of subtasks.entries()) {
+      if (!subtask.title.trim()) {
+        return `서브테스크 ${index + 1} 제목을 입력해야 합니다.`
+      }
+
+      if (subtask.title.trim().length > 64) {
+        return `서브테스크 ${index + 1} 제목은 64자 이하로 입력해야 합니다.`
+      }
+
+      if (!parsePositiveInteger(subtask.score)) {
+        return `서브테스크 ${index + 1} 배점은 양의 정수로 입력해야 합니다.`
+      }
+
+      if (subtask.testCases.length === 0) {
+        return `서브테스크 ${index + 1}에 실제 채점 테스트 케이스가 필요합니다.`
+      }
+    }
+
+    if (subtaskScoreSum !== 100) {
+      return '서브테스크 배점 합은 정확히 100이어야 합니다.'
+    }
   }
 
   return null
@@ -304,6 +375,180 @@ function TestCaseEditor({
   )
 }
 
+function SubtaskEditor({
+  onAdd,
+  onAddTestCase,
+  onRemove,
+  onRemoveTestCase,
+  onUpdate,
+  onUpdateTestCase,
+  rows,
+}: {
+  onAdd: () => void
+  onAddTestCase: (subtaskId: string) => void
+  onRemove: (subtaskId: string) => void
+  onRemoveTestCase: (subtaskId: string, testCaseId: string) => void
+  onUpdate: (subtaskId: string, field: 'title' | 'score', value: string) => void
+  onUpdateTestCase: (
+    subtaskId: string,
+    testCaseId: string,
+    field: 'input' | 'output',
+    value: string,
+  ) => void
+  rows: SubtaskFormRow[]
+}): ReactElement {
+  const scoreSum = rows.reduce((sum, row) => {
+    const parsedScore = parsePositiveInteger(row.score)
+
+    return parsedScore === null ? sum : sum + parsedScore
+  }, 0)
+
+  return (
+    <Card className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-black text-slate-950">서브테스크</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            배점 합이 100이 되도록 작성하고, 각 서브테스크에 실제 채점 테스트 케이스를 배정합니다.
+          </p>
+          <p
+            className={[
+              'mt-2 text-sm font-bold',
+              scoreSum === 100 ? 'text-emerald-700' : 'text-amber-700',
+            ].join(' ')}
+          >
+            현재 배점 합계 {scoreSum}점
+          </p>
+        </div>
+        <Button onClick={onAdd} size="sm" type="button" variant="secondary">
+          <Plus size={16} />
+          서브테스크 추가
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {rows.map((subtask, subtaskIndex) => (
+          <section className="rounded-md border border-slate-200 p-4" key={subtask.id}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="text-sm font-bold text-slate-700">
+                서브테스크 {subtaskIndex + 1}
+              </p>
+              <Button
+                disabled={rows.length === 1}
+                onClick={() => onRemove(subtask.id)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <Trash2 size={15} />
+                삭제
+              </Button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[1fr_160px]">
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">제목</span>
+                <input
+                  className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  maxLength={64}
+                  onChange={(event) => onUpdate(subtask.id, 'title', event.target.value)}
+                  placeholder="예: 작은 입력"
+                  value={subtask.title}
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">배점</span>
+                <input
+                  className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  min={1}
+                  onChange={(event) => onUpdate(subtask.id, 'score', event.target.value)}
+                  type="number"
+                  value={subtask.score}
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-black text-slate-800">실제 채점 테스트 케이스</h3>
+                <Button
+                  onClick={() => onAddTestCase(subtask.id)}
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                >
+                  <Plus size={15} />
+                  케이스 추가
+                </Button>
+              </div>
+
+              {subtask.testCases.map((testCase, testCaseIndex) => (
+                <div
+                  className="rounded-md border border-slate-100 bg-slate-50 p-3"
+                  key={testCase.id}
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold text-slate-600">
+                      케이스 {testCaseIndex + 1}
+                    </p>
+                    <Button
+                      disabled={subtask.testCases.length === 1}
+                      onClick={() => onRemoveTestCase(subtask.id, testCase.id)}
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Trash2 size={15} />
+                      삭제
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="block">
+                      <span className="text-sm font-bold text-slate-700">입력</span>
+                      <textarea
+                        className="mt-2 min-h-28 w-full resize-y rounded-md border border-slate-200 bg-white px-4 py-3 font-mono text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        onChange={(event) =>
+                          onUpdateTestCase(
+                            subtask.id,
+                            testCase.id,
+                            'input',
+                            event.target.value,
+                          )
+                        }
+                        placeholder="입력이 없는 케이스는 비워둘 수 있습니다."
+                        value={testCase.input}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-sm font-bold text-slate-700">출력</span>
+                      <textarea
+                        className="mt-2 min-h-28 w-full resize-y rounded-md border border-slate-200 bg-white px-4 py-3 font-mono text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        onChange={(event) =>
+                          onUpdateTestCase(
+                            subtask.id,
+                            testCase.id,
+                            'output',
+                            event.target.value,
+                          )
+                        }
+                        placeholder="기대 출력"
+                        value={testCase.output}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
 export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactElement {
   const {
     description,
@@ -324,6 +569,7 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
   const [usesCustomChecker, setUsesCustomChecker] = useState(() =>
     hasInitialCheckerCode(initialValue),
   )
+  const [usesSubtasks, setUsesSubtasks] = useState(() => hasInitialSubtasks(initialValue))
   const [exampleCases, setExampleCases] = useState<TestCaseFormRow[]>(() =>
     createRowsFromValues(
       'example',
@@ -337,6 +583,9 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
       initialValue?.actualTestCaseInputs ?? [],
       initialValue?.actualTestCaseOutputs ?? [],
     ),
+  )
+  const [subtasks, setSubtasks] = useState<SubtaskFormRow[]>(() =>
+    createSubtaskRows(initialValue),
   )
   const [savedProblem, setSavedProblem] =
     useState<ProblemDefinitionFormSaveResult | null>(null)
@@ -396,9 +645,84 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
     setActualCases((currentRows) => currentRows.map(updateRow))
   }
 
+  function addSubtask(): void {
+    setSubtasks((currentRows) => [...currentRows, createSubtaskRow()])
+  }
+
+  function removeSubtask(subtaskId: string): void {
+    setSubtasks((currentRows) =>
+      currentRows.length === 1
+        ? currentRows
+        : currentRows.filter((subtask) => subtask.id !== subtaskId),
+    )
+  }
+
+  function updateSubtask(
+    subtaskId: string,
+    field: 'title' | 'score',
+    value: string,
+  ): void {
+    setSubtasks((currentRows) =>
+      currentRows.map((subtask) =>
+        subtask.id === subtaskId ? { ...subtask, [field]: value } : subtask,
+      ),
+    )
+  }
+
+  function addSubtaskTestCase(subtaskId: string): void {
+    setSubtasks((currentRows) =>
+      currentRows.map((subtask) =>
+        subtask.id === subtaskId
+          ? {
+              ...subtask,
+              testCases: [...subtask.testCases, createTestCaseRow('actual')],
+            }
+          : subtask,
+      ),
+    )
+  }
+
+  function removeSubtaskTestCase(subtaskId: string, testCaseId: string): void {
+    setSubtasks((currentRows) =>
+      currentRows.map((subtask) => {
+        if (subtask.id !== subtaskId || subtask.testCases.length === 1) {
+          return subtask
+        }
+
+        return {
+          ...subtask,
+          testCases: subtask.testCases.filter((testCase) => testCase.id !== testCaseId),
+        }
+      }),
+    )
+  }
+
+  function updateSubtaskTestCase(
+    subtaskId: string,
+    testCaseId: string,
+    field: 'input' | 'output',
+    value: string,
+  ): void {
+    setSubtasks((currentRows) =>
+      currentRows.map((subtask) => {
+        if (subtask.id !== subtaskId) {
+          return subtask
+        }
+
+        return {
+          ...subtask,
+          testCases: subtask.testCases.map((testCase) =>
+            testCase.id === testCaseId ? { ...testCase, [field]: value } : testCase,
+          ),
+        }
+      }),
+    )
+  }
+
   function resetForm(): void {
     setFormState(createFormState(initialValue))
     setUsesCustomChecker(hasInitialCheckerCode(initialValue))
+    setUsesSubtasks(hasInitialSubtasks(initialValue))
     setExampleCases(
       createRowsFromValues(
         'example',
@@ -413,6 +737,19 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
         initialValue?.actualTestCaseOutputs ?? [],
       ),
     )
+    setSubtasks(createSubtaskRows(initialValue))
+  }
+
+  function createSubtaskRequestDtos(): ProblemSubtaskRequestDto[] {
+    return subtasks.map((subtask, index) => ({
+      order: index + 1,
+      score: parsePositiveInteger(subtask.score) ?? 0,
+      testCases: subtask.testCases.map((testCase) => ({
+        input: testCase.input,
+        output: testCase.output,
+      })),
+      title: subtask.title.trim(),
+    }))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -425,6 +762,8 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
     const validationMessage = renderValidationMessage(
       formState,
       requiresReferenceSolution,
+      usesSubtasks,
+      subtasks,
       timeLimitSeconds,
       memoryLimitMegabytes,
     )
@@ -442,14 +781,20 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
     }
 
     const checkerCode = usesCustomChecker ? formState.checkerCode : null
+    const subtaskRequestDtos = usesSubtasks ? createSubtaskRequestDtos() : []
     const mutationRequestDto: ProblemMutationRequestDto = {
-      actualTestCaseInputs: actualCases.map((testCase) => testCase.input),
-      actualTestCaseOutputs: actualCases.map((testCase) => testCase.output),
+      actualTestCaseInputs: usesSubtasks
+        ? []
+        : actualCases.map((testCase) => testCase.input),
+      actualTestCaseOutputs: usesSubtasks
+        ? []
+        : actualCases.map((testCase) => testCase.output),
       checkerCode,
       exampleInputs: exampleCases.map((testCase) => testCase.input),
       exampleOutputs: exampleCases.map((testCase) => testCase.output),
       memoryLimitMegabytes,
       statementMarkdown: formState.statementMarkdown,
+      subtasks: subtaskRequestDtos,
       tag: formState.tag.trim(),
       timeLimitSeconds,
       title: formState.title.trim(),
@@ -647,14 +992,45 @@ export function ProblemDefinitionForm(props: ProblemDefinitionFormProps): ReactE
           title="공개 예제 테스트 케이스"
         />
 
-        <TestCaseEditor
-          kind="actual"
-          onAdd={addTestCase}
-          onRemove={removeTestCase}
-          onUpdate={updateTestCase}
-          rows={actualCases}
-          title="실제 채점 테스트 케이스"
-        />
+        <Card>
+          <label className="flex items-start gap-3">
+            <input
+              checked={usesSubtasks}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              onChange={(event) => setUsesSubtasks(event.target.checked)}
+              type="checkbox"
+            />
+            <span>
+              <span className="block text-sm font-bold text-slate-800">
+                서브테스크 문제로 채점
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-slate-500">
+                체크하면 일반 실제 채점 테스트 케이스 대신 서브테스크별 테스트 케이스를 전송합니다.
+              </span>
+            </span>
+          </label>
+        </Card>
+
+        {usesSubtasks ? (
+          <SubtaskEditor
+            onAdd={addSubtask}
+            onAddTestCase={addSubtaskTestCase}
+            onRemove={removeSubtask}
+            onRemoveTestCase={removeSubtaskTestCase}
+            onUpdate={updateSubtask}
+            onUpdateTestCase={updateSubtaskTestCase}
+            rows={subtasks}
+          />
+        ) : (
+          <TestCaseEditor
+            kind="actual"
+            onAdd={addTestCase}
+            onRemove={removeTestCase}
+            onUpdate={updateTestCase}
+            rows={actualCases}
+            title="실제 채점 테스트 케이스"
+          />
+        )}
 
         <div className="flex justify-end">
           <Button disabled={isSubmitting} type="submit">

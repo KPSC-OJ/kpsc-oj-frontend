@@ -141,6 +141,7 @@
   - `totalPages`: number, required, 전체 페이지 수.
   - `problems`: array, required, 현재 페이지의 문제 목록.
   - `problems[].problemNumber`: number, required, 사용자에게 노출되는 문제 번호. `1000`부터 생성 순서대로 증가.
+  - `problems[].createdByServiceUsername`: string, required, 문제 생성자의 서비스 아이디.
   - `problems[].title`: string, required, 문제 제목.
   - `problems[].tag`: string, required, 문제 유형 태그.
   - `problems[].timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
@@ -171,6 +172,12 @@
   - `exampleTestCases[].order`: number, required, 예시 테스트 케이스 순서. 1부터 시작.
   - `exampleTestCases[].input`: string, required, 공개 예시 입력 본문. 빈 문자열 가능.
   - `exampleTestCases[].output`: string, required, 공개 예시 기대 출력 본문. 빈 문자열 가능.
+  - `subtasks`: array, required, 서브테스크 목록. 서브테스크가 없는 일반 문제이면 빈 배열.
+  - `subtasks[].order`: number, required, 같은 문제 안에서 고유한 서브테스크 순서.
+  - `subtasks[].title`: string, required, 서브테스크 제목.
+  - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 메타데이터. 입력/출력 본문은 포함하지 않음.
+  - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
 - Status codes:
   - 200: 문제 상세 조회 성공.
   - 400: `problemNumber` path parameter가 정수가 아님.
@@ -196,11 +203,19 @@
   - `timeLimitSeconds`: number, required, 채점 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 채점 메모리 제한 MB 단위.
   - `statementMarkdown`: string, required, Markdown 문법의 문제 지문.
-  - `checkerCode`: string, optional, C++17 checker 코드. judge 기본 출력 비교를 사용하면 null.
+  - `checkerCode`: string, optional, testlib 기반 C++17 checker 코드. judge 기본 출력 비교를 사용하면 null.
   - `exampleInputs`: string array, required, 공개 예시 입력 목록. 각 값 null 불가, 빈 문자열 가능.
   - `exampleOutputs`: string array, required, 공개 예시 출력 목록. `exampleInputs`와 같은 순서와 개수.
   - `actualTestCaseInputs`: string array, required, 실제 채점용 입력 목록. 각 값 null 불가, 빈 문자열 가능.
   - `actualTestCaseOutputs`: string array, required, 실제 채점용 출력 목록. `actualTestCaseInputs`와 같은 순서와 개수.
+  - `subtasks`: array, required, 서브테스크 정의 목록. 서브테스크가 없는 일반 문제이면 빈 배열.
+  - `subtasks[].order`: number, required, 같은 문제 안에서 고유한 서브테스크 순서.
+  - `subtasks[].title`: string, required, 서브테스크 제목.
+  - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 목록.
+  - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
+  - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
+  - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
 - Status codes:
   - 200: 문제 정의 조회 성공.
   - 400: `problemNumber` path parameter가 정수가 아님.
@@ -214,7 +229,7 @@
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
 
 ### POST /api/v1/problems
-- 설명: 관리자 계정이 문제 본문과 예시/실제 채점 테스트 케이스를 생성한다.
+- 설명: 관리자 계정이 문제 본문과 예시/실제 채점 테스트 케이스를 생성한다. 저장 전에 필수 예시 정답 코드를 실제 채점 테스트 케이스로 사전 채점하며, judge 결과가 전체 통과일 때만 문제를 생성한다.
 - 인증: admin-only. `Authorization: Bearer {accessToken}` 필요.
 - Path params: 없음.
 - Query params: 없음.
@@ -224,11 +239,19 @@
   - `timeLimitSeconds`: number, required, 양의 정수, 채점 시간 제한 seconds 단위, null 불가.
   - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
   - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가.
-  - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
+  - `checkerCode`: string, optional, testlib 기반 C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
+  - `referenceSolutionCode`: string, required, C++17 예시 정답 코드. 문제 저장 전에 `actualTestCaseInputs`/`actualTestCaseOutputs` 전체로 judge 사전 채점을 수행하며, 저장하지 않고 응답에도 포함하지 않는다. 빈 문자열 또는 공백 문자열 불가.
   - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
   - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.
-  - `actualTestCaseInputs`: string array, required, 최소 1개, 실제 채점용 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 테스트 케이스를 표현할 수 있음.
-  - `actualTestCaseOutputs`: string array, required, 최소 1개, 실제 채점용 출력 목록, 각 값 null 불가. `actualTestCaseInputs`와 같은 개수여야 함.
+  - `actualTestCaseInputs`: string array, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점용 입력 목록. 최소 1개, 각 값 null 불가. `subtasks`가 있으면 생략하거나 빈 배열이어야 함.
+  - `actualTestCaseOutputs`: string array, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점용 출력 목록. `actualTestCaseInputs`와 같은 개수여야 하며 `subtasks`가 있으면 생략하거나 빈 배열이어야 함.
+  - `subtasks`: object array, optional, 서브테스크 문제의 배점과 HIDDEN 테스트 케이스 정의. 없거나 빈 배열이면 일반 문제로 처리한다.
+  - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 문제 안에서 고유한 양의 정수.
+  - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
+  - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
+  - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
+  - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
 - Response body:
   - `id`: string, required, 생성된 문제 UUID.
   - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호. 첫 문제는 `1000`이며 이후 문제 생성 순서대로 1씩 증가.
@@ -237,17 +260,20 @@
   - `timeLimitSeconds`: number, required, 저장된 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 저장된 메모리 제한 MB 단위.
   - `exampleTestCaseCount`: number, required, 저장된 공개 예시 테스트 케이스 수.
-  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 실제 채점 입출력 본문은 응답에 포함하지 않음.
+  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 서브테스크 내부 테스트 케이스도 이 개수에 포함하며 실제 채점 입출력 본문은 응답에 포함하지 않음.
   - checker code는 응답에 포함하지 않음.
 - Status codes:
   - 201: 문제 생성 완료.
   - 400: 요청 field 형식 오류 또는 입출력 목록 개수 불일치.
   - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
   - 403: 인증 계정이 관리자 권한이 아님.
+  - 503: judge 서버 설정 누락, 연결 실패, 인증 실패, 또는 응답 매핑 실패로 예시 정답 코드 사전 채점을 완료하지 못함.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 또는 입출력 목록 개수 불일치.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 빈 reference solution code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성 권한이 없음.
+  - `PROBLEM_VERIFICATION_FAILED`: 예시 정답 코드가 실제 채점 테스트 케이스 전체를 통과하지 못함.
+  - `JUDGE_UNAVAILABLE`: judge 서버 설정 누락, 연결 실패, 인증 실패, 또는 응답 매핑 실패로 사전 채점을 완료하지 못함.
 
 ### PATCH /api/v1/problems/{problemNumber}
 - 설명: 문제를 생성한 인증 사용자가 문제 본문, 제한, 선택 checker code, 예시/실제 채점 테스트 케이스를 수정한다. 문제 번호와 생성자는 변경하지 않는다.
@@ -261,11 +287,18 @@
   - `timeLimitSeconds`: number, required, 양의 정수, 채점 시간 제한 seconds 단위, null 불가.
   - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
   - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가.
-  - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
+  - `checkerCode`: string, optional, testlib 기반 C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
   - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
   - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.
-  - `actualTestCaseInputs`: string array, required, 최소 1개, 실제 채점용 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 테스트 케이스를 표현할 수 있음.
-  - `actualTestCaseOutputs`: string array, required, 최소 1개, 실제 채점용 출력 목록, 각 값 null 불가. `actualTestCaseInputs`와 같은 개수여야 함.
+  - `actualTestCaseInputs`: string array, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점용 입력 목록. 최소 1개, 각 값 null 불가. `subtasks`가 있으면 생략하거나 빈 배열이어야 함.
+  - `actualTestCaseOutputs`: string array, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점용 출력 목록. `actualTestCaseInputs`와 같은 개수여야 하며 `subtasks`가 있으면 생략하거나 빈 배열이어야 함.
+  - `subtasks`: object array, optional, 서브테스크 문제의 배점과 HIDDEN 테스트 케이스 정의. 없거나 빈 배열이면 일반 문제로 처리한다. 수정 시 기존 서브테스크와 HIDDEN 테스트 케이스는 요청 내용으로 교체된다.
+  - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 문제 안에서 고유한 양의 정수.
+  - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
+  - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
+  - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
+  - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
 - Response body:
   - `id`: string, required, 수정된 문제 UUID.
   - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호. 수정 전과 동일하다.
@@ -274,7 +307,7 @@
   - `timeLimitSeconds`: number, required, 저장된 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 저장된 메모리 제한 MB 단위.
   - `exampleTestCaseCount`: number, required, 저장된 공개 예시 테스트 케이스 수.
-  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 실제 채점 입출력 본문은 응답에 포함하지 않음.
+  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 서브테스크 내부 테스트 케이스도 이 개수에 포함하며 실제 채점 입출력 본문은 응답에 포함하지 않음.
   - checker code는 응답에 포함하지 않음.
 - Status codes:
   - 200: 문제 수정 완료.
@@ -283,7 +316,7 @@
   - 403: 인증 계정이 해당 문제 생성자가 아님.
   - 404: 해당 문제 번호가 존재하지 않음.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 또는 입출력 목록 개수 불일치.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성자가 아니므로 수정 권한이 없음.
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
@@ -355,11 +388,18 @@
   - `language`: string, required, 제출 언어. 값은 `cpp17` 또는 `python3`.
   - `status`: string, required, 제출 상태 enum.
   - `scorePercentage`: number, optional, 통과한 테스트 비율 percentage. 채점 전이면 null. 테스트 케이스 개수와 통과 개수는 노출하지 않는다.
+  - `totalScore`: number, optional, 백엔드가 저장한 최종 점수. 일반 문제에서는 `scorePercentage`와 같은 값이고, 서브테스크 문제에서는 획득한 서브테스크 점수 합이다. 채점 전이면 null.
   - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각.
   - `sourceCode`: string, required, 제출한 전체 소스 코드. 제출자 본인 또는 관리자에게만 반환.
   - 테스트 케이스별 결과, 테스트 케이스 개수, 통과 개수, 실패 케이스 순서와 종류는 응답에 포함하지 않는다.
   - `compileErrorMessage`: string, optional, 컴파일 오류 메시지. `status=COMPILE_ERROR`일 때 사용하며 없으면 null.
   - `runtimeErrorMessage`: string, optional, 런타임 오류 메시지. `status=RUNTIME_ERROR`일 때 사용하며 없으면 null.
+  - `subtaskResults`: array, required, 서브테스크별 채점 결과. 일반 문제 또는 채점 전이면 빈 배열.
+  - `subtaskResults[].order`: number, required, 서브테스크 순서.
+  - `subtaskResults[].title`: string, required, 서브테스크 제목.
+  - `subtaskResults[].status`: string, required, 서브테스크 결과. `ACCEPTED`, `FAILED`.
+  - `subtaskResults[].score`: number, required, 해당 서브테스크에서 획득한 점수.
+  - `subtaskResults[].maxScore`: number, required, 해당 서브테스크의 최대 점수.
 - Status codes:
   - 200: 제출 상세 조회 성공.
   - 400: `submissionId` path parameter가 UUID 형식이 아님.
@@ -466,7 +506,8 @@
 - Request body: 없음.
 - Response body: HTML document.
   - 생성자 선택 값: 현재 DB에 존재하는 `ADMIN` 권한 사용자 계정.
-  - 입력 항목: 제목, 태그, 시간 제한, 메모리 제한, 문제 설명 Markdown, 선택 checker code, 예시 테스트 케이스, 채점 테스트 케이스.
+  - 입력 항목: 제목, 태그, 시간 제한, 메모리 제한, 문제 설명 Markdown, 필수 예시 정답 코드, 선택 testlib checker code, 예시 테스트 케이스, 채점 테스트 케이스.
+  - checker guide: checker code는 선택 항목이며 화면은 `testlib.h`, `registerTestlibCmd(argc, argv)`, `inf`/`ouf`/`ans` stream, `quitf` verdict 사용을 안내한다.
 - Status codes:
   - 200: 문제 생성 화면 반환.
   - 302: 관리자 세션이 없으면 `/admin/login`으로 redirect.
@@ -475,7 +516,7 @@
   - `ADMIN` 권한 사용자 계정이 없으면 화면에 오류 메시지를 표시하고 제출 버튼을 비활성화한다.
 
 ### POST /admin/problems
-- 설명: 관리자 화면에서 입력한 문제 본문과 예시/실제 채점 테스트 케이스를 생성한다.
+- 설명: 관리자 화면에서 입력한 문제 본문과 예시/실제 채점 테스트 케이스를 생성한다. 저장 전에 필수 예시 정답 코드를 실제 채점 테스트 케이스로 사전 채점하며, judge 결과가 전체 통과일 때만 문제를 생성한다.
 - 인증: admin-session. CSRF token 필요.
 - Path params: 없음.
 - Query params: 없음.
@@ -486,11 +527,17 @@
   - `timeLimitSeconds`: number, required, 양수.
   - `memoryLimitMegabytes`: number, required, 양수.
   - `statementMarkdown`: string, required, 문제 지문 Markdown.
-  - `checkerCode`: string, optional, C++17 checker source code. 빈 문자열은 저장 시 null로 처리한다.
+  - `checkerCode`: string, optional, testlib 기반 C++17 checker source code. 빈 문자열은 저장 시 null로 처리한다.
+  - `referenceSolutionCode`: string, required, C++17 예시 정답 코드. 문제 저장 전에 실제 채점 테스트로 사전 채점하며 저장하지 않는다.
   - `exampleInputs[index]`: string, required, 예시 입력. 최소 1개.
   - `exampleOutputs[index]`: string, required, 예시 출력. `exampleInputs`와 같은 개수.
-  - `actualTestCaseInputs[index]`: string, required, 실제 채점 입력. 최소 1개.
-  - `actualTestCaseOutputs[index]`: string, required, 실제 채점 출력. `actualTestCaseInputs`와 같은 개수.
+  - `actualTestCaseInputs[index]`: string, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점 입력. 최소 1개.
+  - `actualTestCaseOutputs[index]`: string, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점 출력. `actualTestCaseInputs`와 같은 개수.
+  - `subtasks[index].order`: number, optional, 서브테스크 순서. 하나 이상의 서브테스크를 보내면 전체 score 합이 100이어야 한다.
+  - `subtasks[index].title`: string, optional, 서브테스크 제목.
+  - `subtasks[index].score`: number, optional, 서브테스크 배점.
+  - `subtasks[index].testCaseInputs[index]`: string, optional, 해당 서브테스크의 실제 채점 입력.
+  - `subtasks[index].testCaseOutputs[index]`: string, optional, 해당 서브테스크의 실제 채점 출력.
   - `_csrf`: string, required, Spring Security CSRF token.
 - Response body: 없음. 성공/실패 모두 HTML redirect 또는 form 재표시.
 - Status codes:
@@ -498,7 +545,7 @@
   - 302: 생성 성공 시 `/admin/problems/new`로 redirect.
 - Error cases:
   - 인증 필요: `/admin/login`으로 redirect.
-  - 입력 형식 오류, 입출력 목록 개수 불일치, 생성자 권한 부족 또는 사용자 없음: 문제 생성 화면을 다시 표시하고 오류 메시지를 표시한다.
+  - 입력 형식 오류, 입출력 목록 개수 불일치, 생성자 권한 부족, 사용자 없음, 예시 정답 코드 사전 채점 실패, 또는 judge 호출 실패: 문제 생성 화면을 다시 표시하고 오류 메시지를 표시한다.
 
 ### GET /admin/problems/{problemNumber}/edit
 - 설명: 인증된 관리자에게 기존 문제 수정 form이 포함된 Thymeleaf 화면을 반환한다. 관리자 페이지에서는 문제 생성자와 무관하게 모든 문제를 수정할 수 있다.
@@ -508,7 +555,7 @@
 - Query params: 없음.
 - Request body: 없음.
 - Response body: HTML document.
-  - 입력 항목: 제목, 태그, 시간 제한, 메모리 제한, 문제 설명 Markdown, 선택 checker code, 예시 테스트 케이스, 실제 채점용 비공개 테스트 케이스.
+  - 입력 항목: 제목, 태그, 시간 제한, 메모리 제한, 문제 설명 Markdown, 선택 testlib checker code, 예시 테스트 케이스, 실제 채점용 비공개 테스트 케이스.
 - Status codes:
   - 200: 문제 수정 화면 반환.
   - 302: 관리자 세션이 없으면 `/admin/login`으로 redirect. 문제가 없으면 `/admin/problems`로 redirect.
@@ -528,11 +575,16 @@
   - `timeLimitSeconds`: number, required, 양수.
   - `memoryLimitMegabytes`: number, required, 양수.
   - `statementMarkdown`: string, required, 문제 지문 Markdown.
-  - `checkerCode`: string, optional, C++17 checker source code. 빈 문자열은 저장 시 null로 처리한다.
+  - `checkerCode`: string, optional, testlib 기반 C++17 checker source code. 빈 문자열은 저장 시 null로 처리한다.
   - `exampleInputs[index]`: string, required, 예시 입력. 최소 1개.
   - `exampleOutputs[index]`: string, required, 예시 출력. `exampleInputs`와 같은 개수.
-  - `actualTestCaseInputs[index]`: string, required, 실제 채점 입력. 최소 1개.
-  - `actualTestCaseOutputs[index]`: string, required, 실제 채점 출력. `actualTestCaseInputs`와 같은 개수.
+  - `actualTestCaseInputs[index]`: string, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점 입력. 최소 1개.
+  - `actualTestCaseOutputs[index]`: string, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점 출력. `actualTestCaseInputs`와 같은 개수.
+  - `subtasks[index].order`: number, optional, 서브테스크 순서. 하나 이상의 서브테스크를 보내면 기존 서브테스크와 HIDDEN 테스트 케이스를 요청 내용으로 교체한다.
+  - `subtasks[index].title`: string, optional, 서브테스크 제목.
+  - `subtasks[index].score`: number, optional, 서브테스크 배점.
+  - `subtasks[index].testCaseInputs[index]`: string, optional, 해당 서브테스크의 실제 채점 입력.
+  - `subtasks[index].testCaseOutputs[index]`: string, optional, 해당 서브테스크의 실제 채점 출력.
   - `_csrf`: string, required, Spring Security CSRF token.
 - Response body: 없음. 성공/실패 모두 HTML redirect 또는 form 재표시.
 - Status codes:
@@ -559,12 +611,19 @@
 - `POST /api/v1/auth/google`은 Google issuer `https://accounts.google.com`의 JWK/metadata를 통해 Google ID token을 검증한다.
 - Google token audience는 `GOOGLE_OAUTH_CLIENT_ID` 환경 변수로 설정한다.
 - `POST /api/v1/submissions`는 judge를 직접 호출하지 않는다. 제출을 `QUEUED`로 저장하고 백그라운드 processor가 `GET /api/v1/judge-status`로 idle 상태를 확인한 뒤 가장 오래된 제출 하나를 `RUNNING`으로 전환해 `POST /api/v1/judge-attempts`를 호출한다. status endpoint가 404 또는 405를 반환하는 judge 버전에서는 백엔드의 단일 queue processor lock으로 중복 실행을 막고 가장 오래된 제출 하나를 진행한다.
+- `POST /api/v1/problems`는 문제 row를 저장하기 전에 `referenceSolutionCode`를 `language=cpp17`, `problem_id=null`, `checker_code=checkerCode`, HIDDEN 테스트 케이스, 문제 시간/메모리 제한과 함께 `POST /api/v1/judge-attempts`로 동기 사전 채점한다. 서브테스크 문제는 `subtasks[].testCases`를 HIDDEN 테스트 케이스로 flatten해서 전달한다. judge 결과가 `completed`이고 전체 실제 채점 테스트 케이스 수와 통과 수가 일치할 때만 문제를 저장한다.
 - judge 요청에는 `problem_id=problems.id`, 제출 언어, 제출 소스 코드, `problems.checker_code`, HIDDEN 테스트 케이스, 문제 시간/메모리 제한을 전달한다.
-- judge status 조회가 연결 실패, 인증 실패, 5xx 등으로 실패하면 제출은 `QUEUED`로 유지해 다음 poll에서 재시도한다. status endpoint 미지원(404 또는 405)은 compatibility fallback으로 처리해 한 제출을 진행한다. 채점 요청 실패 또는 응답 매핑 실패 시 해당 제출은 `INTERNAL_ERROR`로 종료한다.
+- judge status 조회가 연결 실패, 인증 실패, 5xx 등으로 실패하면 제출은 `QUEUED`로 유지해 다음 poll에서 재시도한다. status endpoint 미지원(404 또는 405)은 compatibility fallback으로 처리해 한 제출을 진행한다. 채점 요청 실패 또는 응답 매핑 실패 시 해당 제출은 `JUDGE_ERROR`로 종료한다.
 - judge result mapping:
   - `completed` -> `ACCEPTED`.
   - `failed_compile` -> `COMPILE_ERROR`.
-  - `failed_runtime_missing` -> `INTERNAL_ERROR`.
+  - `failed_runtime_missing` -> `JUDGE_ERROR`.
   - `failed_test_case` -> 첫 실패 테스트 케이스 상태에 따라 `WRONG_ANSWER`, `RUNTIME_ERROR`, `TIME_LIMIT_EXCEEDED`, `MEMORY_LIMIT_EXCEEDED`.
+- subtask scoring:
+  - judge는 테스트 케이스 단위 결과만 반환하고 서브테스크 점수 계산을 하지 않는다.
+  - 백엔드는 HIDDEN 테스트 케이스 결과를 `problem_test_cases.subtask_id` 기준으로 그룹화한다.
+  - 한 서브테스크의 모든 HIDDEN 테스트 케이스가 `passed`이면 해당 `problem_subtasks.score`를 획득하고, 하나라도 실패하거나 결과가 누락되면 0점을 획득한다.
+  - 전체 점수는 획득한 서브테스크 점수 합이며 `submissions.score_percentage`에 저장한다.
+  - 전체 점수가 100이면 `ACCEPTED`, 0보다 크고 100보다 작으면 `PARTIAL_ACCEPTED`, 0이면 첫 실패 테스트 케이스 상태를 대표 실패 상태로 사용한다.
 - 문제 생성 시 저장된 `checkerCode`는 judge 요청의 `checker_code`로 전달한다. 값이 null이면 judge 기본 출력 비교를 사용한다.
-- 외부 retry 정책은 judge status 조회 장애에 대한 다음 poll 재시도만 정의한다. status endpoint 미지원 fallback과 달리 채점 요청 자체가 실패하면 이미 `INTERNAL_ERROR`가 된 제출의 재채점 API는 아직 정의하지 않는다.
+- 외부 retry 정책은 judge status 조회 장애에 대한 다음 poll 재시도만 정의한다. status endpoint 미지원 fallback과 달리 채점 요청 자체가 실패하면 이미 `JUDGE_ERROR`가 된 제출의 재채점 API는 아직 정의하지 않는다.

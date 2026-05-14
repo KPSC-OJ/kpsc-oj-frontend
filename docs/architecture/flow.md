@@ -76,13 +76,13 @@
 - Actor: 일반 사용자
 - Entry point: `/problems/:id/submit`
 - Preconditions: 로그인 세션이 있어야 하고 URL에 문제 번호가 포함되어야 한다.
-- Steps: `SubmitPage`가 `useProblemDetail(problemNumber)`로 `GET /api/v1/problems/{problemNumber}`를 호출해 문제 본문과 공개 예제를 표시한다. 문제 본문의 `statementMarkdown`은 `MarkdownContent`로 렌더링해 풀이 사용자가 Markdown 원문이 아니라 렌더링된 지문과 `$...$`, `$$...$$` 수식을 보게 한다. 공개 예제 Input/Output은 `ProblemExampleBlock`으로 표시하며 각 블록의 복사 버튼은 예제 원문을 클립보드에 복사한다. 같은 화면의 `내 제출` 탭은 `useMySubmissions(submissionListPage, problemNumber, submissionListRefreshKey)`로 해당 문제의 내 제출 목록을 조회하고 `ProblemSubmissionHistory`가 목록과 pagination을 표시한다. 사용자가 제출하면 `useCreateSubmission()`이 `POST /api/v1/submissions`를 호출한다. 생성된 제출 ID가 있으면 `useSubmissionDetail(submissionId)`가 `GET /api/v1/submissions/{submissionId}`를 호출해 채점 상태, 점수, 컴파일/런타임 오류 메시지를 조회한다. 각 보호 API 호출 전에는 `requestWithFreshSession()`이 access token 갱신을 처리한다. 제출 상태가 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING`이면 2.5초 후 상세 조회를 반복한다.
+- Steps: `SubmitPage`가 `useProblemDetail(problemNumber)`로 `GET /api/v1/problems/{problemNumber}`를 호출해 문제 본문, 공개 예제, 서브테스크 메타데이터를 표시한다. 문제 본문의 `statementMarkdown`은 `MarkdownContent`로 렌더링해 풀이 사용자가 Markdown 원문이 아니라 렌더링된 지문과 `$...$`, `$$...$$` 수식을 보게 한다. 공개 예제 Input/Output은 `ProblemExampleBlock`으로 표시하며 각 블록의 복사 버튼은 예제 원문을 클립보드에 복사한다. 서브테스크가 있으면 제목, 배점, 비공개 테스트 케이스 개수만 표시하고 HIDDEN 테스트 케이스 본문은 표시하지 않는다. 같은 화면의 `내 제출` 탭은 `useMySubmissions(submissionListPage, problemNumber, submissionListRefreshKey)`로 해당 문제의 내 제출 목록을 조회하고 `ProblemSubmissionHistory`가 목록과 pagination을 표시한다. 사용자가 제출하면 `useCreateSubmission()`이 `POST /api/v1/submissions`를 호출한다. 생성된 제출 ID가 있으면 `useSubmissionDetail(submissionId)`가 `GET /api/v1/submissions/{submissionId}`를 호출해 채점 상태, 전체 점수, 서브테스크별 결과, 컴파일/런타임 오류 메시지를 조회한다. 각 보호 API 호출 전에는 `requestWithFreshSession()`이 access token 갱신을 처리한다. 제출 상태가 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING`이면 2.5초 후 상세 조회를 반복한다.
 - Validation: 프론트엔드는 문제 번호가 양의 정수인지, 소스 코드가 비어 있지 않은지 확인한다. 지원 언어와 문제 존재 여부는 백엔드가 최종 검증한다.
 - Empty state: 최근 제출이 없으면 제출 기록 없음 안내를 표시하고, `내 제출` 탭에서는 현재 문제에 대한 제출 기록 없음 안내를 표시한다.
 - Error state: 문제 조회 404, 제출 400/401/404, 미지원 언어 오류, 제출 상세 403/404 오류를 화면에 표시한다. 예제 복사가 실패하면 해당 복사 버튼이 실패 상태를 표시한다.
 - Permission behavior: authenticated
 - Retry or recovery: 소스 코드 수정 후 다시 제출할 수 있다.
-- Side effects: 제출 성공 시 백엔드에 제출이 생성되고 초기 상태가 표시된다. 제출 목록은 1페이지로 돌아가 재조회되며, 이후 비동기 채점 결과가 상세 조회 polling으로 갱신된다.
+- Side effects: 제출 성공 시 백엔드에 제출이 생성되고 초기 상태가 표시된다. 제출 목록은 1페이지로 돌아가 재조회되며, 이후 비동기 채점 결과와 서브테스크 점수가 상세 조회 polling으로 갱신된다.
 - Related API: `GET /api/v1/problems/{problemNumber}`, `GET /api/v1/submissions/me`, `POST /api/v1/submissions`, `GET /api/v1/submissions/{submissionId}`
 - Related DB tables: 없음
 
@@ -118,13 +118,13 @@
 - Actor: 관리자
 - Entry point: `/admin/problems/new`
 - Preconditions: 로그인 세션이 있어야 하며 auth session role이 `ADMIN`이어야 한다. 백엔드 기준 관리자 권한이 필요하다.
-- Steps: 비로그인 사용자가 접근하면 `ProtectedRoute`가 `/login`으로 이동시킨다. 로그인했지만 `ADMIN`이 아닌 사용자는 `ProtectedRoute requiredRole=ADMIN`이 `/problems`로 이동시켜 문제 생성 화면을 조립하지 않는다. 관리자는 `AdminProblemNewPage`에서 제목, 태그, 시간 제한, 메모리 제한, Markdown 본문, 공개 예제 테스트 케이스, 실제 채점 테스트 케이스를 입력한다. 커스텀 checker 사용 체크박스를 켜면 C++17 실행 규약, 템플릿, 확인 목록, checker 코드 입력란이 표시된다. 제출 시 page가 request DTO를 만들고 `useCreateProblem()`이 `requestWithFreshSession()`으로 유효한 access token을 확보한 뒤 `problemService.createProblem()`을 호출해 `POST /api/v1/problems`를 요청한다.
-- Validation: 프론트엔드는 제목 필수/20자 이하, 태그 필수/64자 이하, 시간/메모리 양의 정수, 본문 필수, 예제/실제 테스트 케이스 최소 1개를 확인한다. 커스텀 checker를 선택했는데 코드가 공백이면 제출하지 않는다. checker 코드 형식, 입출력 배열 개수 일치, 관리자 권한은 백엔드가 최종 검증한다.
+- Steps: 비로그인 사용자가 접근하면 `ProtectedRoute`가 `/login`으로 이동시킨다. 로그인했지만 `ADMIN`이 아닌 사용자는 `ProtectedRoute requiredRole=ADMIN`이 `/problems`로 이동시켜 문제 생성 화면을 조립하지 않는다. 관리자는 `AdminProblemNewPage`에서 제목, 태그, 시간 제한, 메모리 제한, Markdown 본문, 공개 예제 테스트 케이스, 예시 정답 코드, 일반 실제 채점 테스트 케이스 또는 서브테스크별 테스트 케이스를 입력한다. 커스텀 checker 사용 체크박스를 켜면 C++17 실행 규약, 템플릿, 확인 목록, checker 코드 입력란이 표시된다. 서브테스크 사용 체크박스를 켜면 배점과 서브테스크별 HIDDEN 테스트 케이스를 입력한다. 제출 시 page가 request DTO를 만들고 `useCreateProblem()`이 `requestWithFreshSession()`으로 유효한 access token을 확보한 뒤 `problemService.createProblem()`을 호출해 `POST /api/v1/problems`를 요청한다.
+- Validation: 프론트엔드는 제목 필수/20자 이하, 태그 필수/64자 이하, 시간/메모리 양의 정수, 본문 필수, 예제 테스트 케이스 최소 1개, 예시 정답 코드 필수를 확인한다. 서브테스크를 사용하지 않으면 일반 실제 테스트 케이스 최소 1개를 입력하고, 서브테스크를 사용하면 각 서브테스크 제목/양수 배점/테스트 케이스 최소 1개와 배점 합 100을 확인한다. 커스텀 checker를 선택했는데 코드가 공백이면 제출하지 않는다. checker 코드 형식, 입출력 배열 개수 일치, 관리자 권한, 서브테스크 최종 유효성은 백엔드가 최종 검증한다.
 - Empty state: 빈 폼
 - Error state: 401이면 재로그인 안내, 403이면 문제 생성 권한 없음, 400이면 백엔드 검증 오류 메시지를 표시한다.
 - Permission behavior: 프론트엔드는 인증 세션이 없는 접근과 `ADMIN`이 아닌 접근을 차단한다. 백엔드 `admin-only` 검증이 최종 권한 경계다.
 - Retry or recovery: 오류 수정 후 같은 폼에서 다시 제출할 수 있다.
-- Side effects: 성공 시 백엔드에 문제, 선택 checker, 테스트 케이스가 생성되고, 생성 결과 요약을 표시한 뒤 폼을 초기화한다.
+- Side effects: 성공 시 백엔드에 문제, 선택 checker, 일반 실제 테스트 케이스 또는 서브테스크 테스트 케이스가 생성되고, 생성 결과 요약을 표시한 뒤 폼을 초기화한다.
 - Related API: `POST /api/v1/problems`
 - Related DB tables: 없음
 
@@ -132,12 +132,12 @@
 - Actor: 문제 생성자
 - Entry point: `/admin/problems/:problemNumber/edit`
 - Preconditions: 로그인 세션이 있어야 하며 해당 문제를 출제한 계정이어야 한다. 프론트엔드는 문제 목록의 생성자 정보로 수정 버튼 노출을 제한하고, 백엔드는 해당 문제의 `createdBy` 계정인지 최종 검증한다.
-- Steps: 문제 목록에서 본인이 출제한 문제의 수정 버튼으로 문제 수정 화면에 진입한다. `AdminProblemEditPage`가 라우트의 문제 번호를 양의 정수로 검증하고 `useProblemDefinition(problemNumber)`을 호출한다. hook은 `requestWithFreshSession()`으로 유효한 access token을 확보한 뒤 `problemService.getProblemDefinition()`으로 `GET /api/v1/problems/{problemNumber}/definition`을 요청한다. 응답은 `ProblemDefinition` view model로 변환되고 `ProblemDefinitionForm`의 초기값이 된다. 기존 checker가 있으면 커스텀 checker 체크박스가 켜진 상태로 시작하고, 체크박스를 켜면 C++17 실행 규약, 템플릿, 확인 목록, checker 코드 입력란이 표시된다. 사용자가 내용을 수정해 저장하면 page가 `useUpdateProblem()`을 통해 `PATCH /api/v1/problems/{problemNumber}`를 호출한다.
-- Validation: 프론트엔드는 문제 번호, 제목 필수/20자 이하, 태그 필수/64자 이하, 시간/메모리 양의 정수, 본문 필수, 예제/실제 테스트 케이스 최소 1개를 확인한다. 커스텀 checker를 선택했는데 코드가 공백이면 제출하지 않는다. checker 코드 형식, 입출력 배열 개수 일치, 문제 생성자 권한은 백엔드가 최종 검증한다.
+- Steps: 문제 목록에서 본인이 출제한 문제의 수정 버튼으로 문제 수정 화면에 진입한다. `AdminProblemEditPage`가 라우트의 문제 번호를 양의 정수로 검증하고 `useProblemDefinition(problemNumber)`을 호출한다. hook은 `requestWithFreshSession()`으로 유효한 access token을 확보한 뒤 `problemService.getProblemDefinition()`으로 `GET /api/v1/problems/{problemNumber}/definition`을 요청한다. 응답은 `ProblemDefinition` view model로 변환되고 `ProblemDefinitionForm`의 초기값이 된다. 기존 checker가 있으면 커스텀 checker 체크박스가 켜진 상태로 시작하고, 기존 서브테스크가 있으면 서브테스크 사용 체크박스가 켜진 상태로 시작한다. 사용자가 내용을 수정해 저장하면 page가 `useUpdateProblem()`을 통해 `PATCH /api/v1/problems/{problemNumber}`를 호출한다.
+- Validation: 프론트엔드는 문제 번호, 제목 필수/20자 이하, 태그 필수/64자 이하, 시간/메모리 양의 정수, 본문 필수, 예제 테스트 케이스 최소 1개를 확인한다. 서브테스크를 사용하지 않으면 일반 실제 테스트 케이스 최소 1개를 입력하고, 서브테스크를 사용하면 각 서브테스크 제목/양수 배점/테스트 케이스 최소 1개와 배점 합 100을 확인한다. 커스텀 checker를 선택했는데 코드가 공백이면 제출하지 않는다. checker 코드 형식, 입출력 배열 개수 일치, 서브테스크 최종 유효성, 문제 생성자 권한은 백엔드가 최종 검증한다.
 - Empty state: 수정 대상 문제 정의를 불러오는 동안 loading 상태를 표시한다.
 - Error state: 정의 조회 401/403/404, 수정 요청 400/401/403/404 오류를 화면에 표시한다.
 - Permission behavior: 프론트엔드는 인증 세션이 없는 접근을 차단하고, 목록에서는 본인 출제 문제에만 수정 버튼을 표시한다. 백엔드의 문제 생성자 검증이 최종 권한 경계다.
 - Retry or recovery: 조회 실패 시 문제 목록으로 돌아갈 수 있고, 저장 실패 시 오류 수정 후 같은 폼에서 다시 저장할 수 있다.
-- Side effects: 성공 시 백엔드의 문제 정의, 선택 checker, 공개 예제, 실제 채점 테스트 케이스가 교체되고 저장 결과 요약을 표시한다.
+- Side effects: 성공 시 백엔드의 문제 정의, 선택 checker, 공개 예제, 일반 실제 테스트 케이스 또는 서브테스크 테스트 케이스가 교체되고 저장 결과 요약을 표시한다.
 - Related API: `GET /api/v1/problems/{problemNumber}/definition`, `PATCH /api/v1/problems/{problemNumber}`
 - Related DB tables: 없음

@@ -147,7 +147,7 @@
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
 
 ### GET /api/v1/problems/{problemNumber}
-- 설명: 문제 번호를 기준으로 문제 상세 정보를 조회한다. 공개 예시 테스트 케이스만 반환한다.
+- 설명: 문제 번호를 기준으로 문제 상세 정보를 조회한다. 공개 예시 테스트 케이스와 서브테스크 메타데이터를 반환하며 실제 채점용 비공개 테스트 케이스 본문은 반환하지 않는다.
 - 인증: authenticated.
 - Path params:
   - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호.
@@ -164,6 +164,12 @@
   - `exampleTestCases[].order`: number, required, 예시 테스트 케이스 순서.
   - `exampleTestCases[].input`: string, required, 공개 예시 입력 본문. 빈 문자열 가능.
   - `exampleTestCases[].output`: string, required, 공개 예시 기대 출력 본문. 빈 문자열 가능.
+  - `subtasks`: array, required, 서브테스크 목록. 서브테스크가 없는 일반 문제이면 빈 배열.
+  - `subtasks[].order`: number, required, 같은 문제 안에서 고유한 서브테스크 순서.
+  - `subtasks[].title`: string, required, 서브테스크 제목.
+  - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 메타데이터. 입력/출력 본문은 포함하지 않음.
+  - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
 - Status codes:
   - 200: 문제 상세 조회 성공.
   - 400: `problemNumber` path parameter가 정수가 아님.
@@ -175,7 +181,7 @@
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
 
 ### GET /api/v1/problems/{problemNumber}/definition
-- 설명: 문제 생성자가 문제 수정을 위해 전체 문제 정의를 조회한다. 선택 checker code와 실제 채점용 비공개 테스트 케이스를 포함한다.
+- 설명: 문제 생성자가 문제 수정을 위해 전체 문제 정의를 조회한다. 선택 checker code, 실제 채점용 비공개 테스트 케이스, 서브테스크 정의를 포함한다.
 - 인증: authenticated. 요청 사용자는 해당 문제의 `createdBy` 계정이어야 한다.
 - Path params:
   - `problemNumber`: number, required, 조회할 문제 번호.
@@ -194,6 +200,14 @@
   - `exampleOutputs`: string array, required, 공개 예시 출력 목록. `exampleInputs`와 같은 순서와 개수.
   - `actualTestCaseInputs`: string array, required, 실제 채점용 입력 목록. 각 값 null 불가, 빈 문자열 가능.
   - `actualTestCaseOutputs`: string array, required, 실제 채점용 출력 목록. `actualTestCaseInputs`와 같은 순서와 개수.
+  - `subtasks`: array, required, 서브테스크 정의 목록. 서브테스크가 없는 일반 문제이면 빈 배열.
+  - `subtasks[].order`: number, required, 같은 문제 안에서 고유한 서브테스크 순서.
+  - `subtasks[].title`: string, required, 서브테스크 제목.
+  - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 목록.
+  - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
+  - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
+  - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
 - Status codes:
   - 200: 문제 정의 조회 성공.
   - 400: `problemNumber` path parameter가 정수가 아님.
@@ -207,7 +221,7 @@
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
 
 ### POST /api/v1/problems
-- 설명: 관리자 계정이 문제 본문, 선택 checker code, 공개 예제/실제 채점 테스트 케이스를 생성한다.
+- 설명: 관리자 계정이 문제 본문, 선택 checker code, 공개 예제, 일반 실제 채점 테스트 케이스 또는 선택 서브테스크를 생성한다.
 - 인증: admin-only. `Authorization: Bearer {accessToken}` 필요.
 - Path params: 없음.
 - Query params: 없음.
@@ -218,10 +232,18 @@
   - `memoryLimitMegabytes`: number, required, 양의 정수, 채점 메모리 제한 MB 단위, null 불가.
   - `statementMarkdown`: string, required, Markdown 문법의 문제 지문, null 불가. `$...$`, `$$...$$` LaTeX 수식 포함 가능.
   - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
+  - `referenceSolutionCode`: string, required, C++17 예시 정답 코드. 문제 저장 전에 실제 채점 테스트 케이스 전체로 judge 사전 채점을 수행하며, 저장하지 않고 응답에도 포함하지 않는다. 빈 문자열 또는 공백 문자열 불가.
   - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
   - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.
-  - `actualTestCaseInputs`: string array, required, 최소 1개, 실제 채점용 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 테스트 케이스를 표현할 수 있음.
-  - `actualTestCaseOutputs`: string array, required, 최소 1개, 실제 채점용 출력 목록, 각 값 null 불가. `actualTestCaseInputs`와 같은 개수여야 함.
+  - `actualTestCaseInputs`: string array, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점용 입력 목록. 최소 1개, 각 값 null 불가. `subtasks`가 있으면 빈 배열로 전송한다.
+  - `actualTestCaseOutputs`: string array, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점용 출력 목록. `actualTestCaseInputs`와 같은 개수여야 하며 `subtasks`가 있으면 빈 배열로 전송한다.
+  - `subtasks`: object array, optional, 서브테스크 문제의 배점과 HIDDEN 테스트 케이스 정의. 없거나 빈 배열이면 일반 문제로 처리한다.
+  - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 문제 안에서 고유한 양의 정수.
+  - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
+  - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
+  - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
+  - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
 - Response body:
   - `id`: string, required, 생성된 문제 UUID.
   - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호.
@@ -230,20 +252,23 @@
   - `timeLimitSeconds`: number, required, 저장된 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 저장된 메모리 제한 MB 단위.
   - `exampleTestCaseCount`: number, required, 저장된 공개 예시 테스트 케이스 수.
-  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 실제 채점 입출력 본문은 응답에 포함하지 않음.
+  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 서브테스크 내부 테스트 케이스도 이 개수에 포함하며 실제 채점 입출력 본문은 응답에 포함하지 않음.
   - checker code는 응답에 포함하지 않음.
 - Status codes:
   - 201: 문제 생성 완료.
   - 400: 요청 field 형식 오류 또는 입출력 목록 개수 불일치.
   - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
   - 403: 인증 계정이 관리자 권한이 아님.
+  - 503: judge 서버 설정 누락, 연결 실패, 인증 실패, 또는 응답 매핑 실패로 예시 정답 코드 사전 채점을 완료하지 못함.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 또는 입출력 목록 개수 불일치.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 빈 reference solution code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성 권한이 없음.
+  - `PROBLEM_VERIFICATION_FAILED`: 예시 정답 코드가 실제 채점 테스트 케이스 전체를 통과하지 못함.
+  - `JUDGE_UNAVAILABLE`: judge 서버 설정 누락, 연결 실패, 인증 실패, 또는 응답 매핑 실패로 사전 채점을 완료하지 못함.
 
 ### PATCH /api/v1/problems/{problemNumber}
-- 설명: 문제를 생성한 인증 사용자가 문제 본문, 제한, 선택 checker code, 예시/실제 채점 테스트 케이스를 수정한다. 문제 번호와 생성자는 변경하지 않는다.
+- 설명: 문제를 생성한 인증 사용자가 문제 본문, 제한, 선택 checker code, 예시, 일반 실제 채점 테스트 케이스 또는 선택 서브테스크를 수정한다. 문제 번호와 생성자는 변경하지 않는다.
 - 인증: authenticated. 요청 사용자는 해당 문제의 `createdBy` 계정이어야 한다.
 - Path params:
   - `problemNumber`: number, required, 수정할 문제 번호.
@@ -257,8 +282,15 @@
   - `checkerCode`: string, optional, C++17 checker 코드. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
   - `exampleInputs`: string array, required, 최소 1개, 공개 예시 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 예시를 표현할 수 있음.
   - `exampleOutputs`: string array, required, 최소 1개, 공개 예시 출력 목록, 각 값 null 불가. `exampleInputs`와 같은 개수여야 함.
-  - `actualTestCaseInputs`: string array, required, 최소 1개, 실제 채점용 입력 목록, 각 값 null 불가. 빈 문자열은 입력이 없는 테스트 케이스를 표현할 수 있음.
-  - `actualTestCaseOutputs`: string array, required, 최소 1개, 실제 채점용 출력 목록, 각 값 null 불가. `actualTestCaseInputs`와 같은 개수여야 함.
+  - `actualTestCaseInputs`: string array, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점용 입력 목록. 최소 1개, 각 값 null 불가. `subtasks`가 있으면 빈 배열로 전송한다.
+  - `actualTestCaseOutputs`: string array, conditionally required, 서브테스크가 없는 일반 문제의 실제 채점용 출력 목록. `actualTestCaseInputs`와 같은 개수여야 하며 `subtasks`가 있으면 빈 배열로 전송한다.
+  - `subtasks`: object array, optional, 서브테스크 문제의 배점과 HIDDEN 테스트 케이스 정의. 없거나 빈 배열이면 일반 문제로 처리한다. 수정 시 기존 서브테스크와 HIDDEN 테스트 케이스는 요청 내용으로 교체된다.
+  - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 문제 안에서 고유한 양의 정수.
+  - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
+  - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
+  - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
+  - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
 - Response body:
   - `id`: string, required, 수정된 문제 UUID.
   - `problemNumber`: number, required, 사용자에게 노출되는 문제 번호. 수정 전과 동일하다.
@@ -267,7 +299,7 @@
   - `timeLimitSeconds`: number, required, 저장된 시간 제한 seconds 단위.
   - `memoryLimitMegabytes`: number, required, 저장된 메모리 제한 MB 단위.
   - `exampleTestCaseCount`: number, required, 저장된 공개 예시 테스트 케이스 수.
-  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 실제 채점 입출력 본문은 응답에 포함하지 않음.
+  - `actualTestCaseCount`: number, required, 저장된 실제 채점 테스트 케이스 수. 서브테스크 내부 테스트 케이스도 이 개수에 포함하며 실제 채점 입출력 본문은 응답에 포함하지 않음.
   - checker code는 응답에 포함하지 않음.
 - Status codes:
   - 200: 문제 수정 완료.
@@ -276,7 +308,7 @@
   - 403: 인증 계정이 해당 문제 생성자가 아님.
   - 404: 해당 문제 번호가 존재하지 않음.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 또는 입출력 목록 개수 불일치.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 checker code, 입출력 목록 개수 불일치, subtask score 합이 100이 아님, 중복 subtask order, subtask score가 0 이하, 또는 서브테스크 문제에서 일반 HIDDEN 테스트 케이스가 함께 제공됨.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 문제 생성자가 아니므로 수정 권한이 없음.
   - `PROBLEM_NOT_FOUND`: 해당 문제 번호의 문제가 존재하지 않음.
@@ -348,11 +380,18 @@
   - `language`: string, required, 제출 언어. 값은 `cpp17` 또는 `python3`.
   - `status`: string, required, 제출 상태 enum.
   - `scorePercentage`: number, optional, 통과한 테스트 비율 percentage. 채점 전이면 null. 테스트 케이스 개수와 통과 개수는 노출하지 않음.
+  - `totalScore`: number, optional, 백엔드가 저장한 최종 점수. 일반 문제에서는 `scorePercentage`와 같은 값이고, 서브테스크 문제에서는 획득한 서브테스크 점수 합이다. 채점 전이면 null.
   - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각.
   - `sourceCode`: string, required, 제출한 전체 소스 코드. 제출자 본인 또는 관리자에게만 반환.
   - 테스트 케이스별 결과, 테스트 케이스 개수, 통과 개수, 실패 케이스 순서와 종류는 응답에 포함하지 않음.
   - `compileErrorMessage`: string, optional, 컴파일 오류 메시지. `status=COMPILE_ERROR`일 때 사용하며 없으면 null.
   - `runtimeErrorMessage`: string, optional, 런타임 오류 메시지. `status=RUNTIME_ERROR`일 때 사용하며 없으면 null.
+  - `subtaskResults`: array, required, 서브테스크별 채점 결과. 일반 문제 또는 채점 전이면 빈 배열.
+  - `subtaskResults[].order`: number, required, 서브테스크 순서.
+  - `subtaskResults[].title`: string, required, 서브테스크 제목.
+  - `subtaskResults[].status`: string, required, 서브테스크 결과. `ACCEPTED`, `FAILED`.
+  - `subtaskResults[].score`: number, required, 해당 서브테스크에서 획득한 점수.
+  - `subtaskResults[].maxScore`: number, required, 해당 서브테스크의 최대 점수.
 - Status codes:
   - 200: 제출 상세 조회 성공.
   - 400: `submissionId` path parameter가 UUID 형식이 아님.
@@ -371,8 +410,11 @@
 - `src/services/submissionService.ts`는 백엔드 `POST /api/v1/submissions`, `GET /api/v1/submissions/me`, `GET /api/v1/submissions/{submissionId}`를 호출한다.
 - 제출 생성 후 `useSubmissionDetail`은 `GET /api/v1/submissions/{submissionId}`를 호출하고 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` 상태에서는 2.5초 간격으로 다시 조회한다.
 - `POST /api/v1/problems` 호출 화면은 `ProtectedRoute requiredRole="ADMIN"`으로 관리자 세션에만 노출하고, 백엔드 403 응답도 최종 권한 경계로 처리한다.
-- 문제 수정 화면은 `GET /api/v1/problems/{problemNumber}/definition`으로 전체 문제 정의를 채운 뒤 `PATCH /api/v1/problems/{problemNumber}`로 같은 DTO 구조를 저장한다. 두 API 모두 백엔드에서 문제 생성자 여부를 최종 검증한다.
+- 문제 상세 화면은 `subtasks`가 있으면 서브테스크 제목, 배점, 테스트 케이스 개수를 표시하고 비공개 테스트 케이스 본문은 표시하지 않는다.
+- 문제 생성/수정 화면은 서브테스크 사용 여부에 따라 일반 `actualTestCaseInputs`/`actualTestCaseOutputs` 또는 `subtasks[].testCases` 중 하나를 전송한다. 서브테스크 사용 시 일반 실제 채점 테스트 케이스 배열은 빈 배열로 보낸다.
+- 문제 수정 화면은 `GET /api/v1/problems/{problemNumber}/definition`으로 전체 문제/서브테스크 정의를 채운 뒤 `PATCH /api/v1/problems/{problemNumber}`로 같은 DTO 구조를 저장한다. 두 API 모두 백엔드에서 문제 생성자 여부를 최종 검증한다.
 - 문제 생성 화면은 `checkerCode` 입력이 공백뿐이면 요청 body에서 생략한다.
+- 제출 상세 화면은 `totalScore`가 있으면 점수로 표시하고, 없으면 `scorePercentage`를 표시한다. `subtaskResults`가 있으면 서브테스크별 획득 점수와 상태를 표시한다.
 - `POST /api/v1/auth/google` 응답의 `requiresSignup=false`는 `AuthSession`, `requiresSignup=true`는 pending signup state로 정규화한다.
 - `POST /api/v1/auth/signup` 응답 token set은 즉시 `AuthSession`으로 변환하며, 이 시점에 로그인 완료 상태가 된다.
 - `POST /api/v1/auth/refresh` 응답 token set은 즉시 기존 `AuthSession`을 대체하며, 동시 보호 API 요청은 하나의 refresh 요청 결과를 공유한다.

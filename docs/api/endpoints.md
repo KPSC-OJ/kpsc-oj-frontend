@@ -10,10 +10,10 @@
 | POST | /api/v1/auth/refresh | public | refresh token으로 access/refresh token 재발급 |
 | POST | /api/v1/auth/logout | authenticated | 현재 access token session 폐기 |
 | GET | /api/v1/problems | authenticated | 문제 목록 및 생성자 식별 정보 조회 |
-| GET | /api/v1/problems/{problemNumber} | authenticated | 문제 상세 조회 |
-| GET | /api/v1/problems/{problemNumber}/definition | authenticated | 문제 수정용 전체 문제 정의 조회 |
-| POST | /api/v1/problems | admin-only | 문제 본문, 선택 checker, 테스트 케이스 생성 |
-| PATCH | /api/v1/problems/{problemNumber} | authenticated | 문제 본문, 선택 checker, 테스트 케이스 수정 |
+| GET | /api/v1/problems/{problemNumber} | authenticated | 문제 상세 및 서브테스크 메타데이터 조회 |
+| GET | /api/v1/problems/{problemNumber}/definition | authenticated | 문제 수정용 전체 문제/서브테스크 정의 조회 |
+| POST | /api/v1/problems | admin-only | 문제 본문, 선택 checker, 테스트 케이스, 선택 서브테스크 생성 |
+| PATCH | /api/v1/problems/{problemNumber} | authenticated | 문제 본문, 선택 checker, 테스트 케이스, 선택 서브테스크 수정 |
 | POST | /api/v1/submissions | authenticated | 소스 코드 제출 생성 |
 | GET | /api/v1/submissions/me | authenticated | 내 제출 목록 조회 |
-| GET | /api/v1/submissions/{submissionId} | authenticated | 제출 상세와 채점 결과 조회 |
+| GET | /api/v1/submissions/{submissionId} | authenticated | 제출 상세, 전체 점수, 서브테스크 채점 결과 조회 |

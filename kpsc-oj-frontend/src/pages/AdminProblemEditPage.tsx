@@ -75,7 +75,7 @@ export function AdminProblemEditPage(): ReactElement {
 
   return (
     <ProblemDefinitionForm
-      description="기존 문제 정의와 선택 checker, 예제와 실제 채점 테스트 케이스를 수정합니다."
+      description="기존 문제 정의와 선택 checker, 예제와 일반/서브테스크 채점 테스트 케이스를 수정합니다."
       eyebrow="Admin"
       forbiddenErrorMessage="문제 수정 권한이 없습니다."
       initialValue={problemDefinition}

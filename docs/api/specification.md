@@ -325,7 +325,7 @@
 - Request body:
   - `problemNumber`: number, required, 제출 대상 문제 번호.
   - `language`: string, required, 제출 언어. 허용 값은 `cpp17`, `python3`.
-  - `sourceCode`: string, required, 제출할 전체 소스 코드. 빈 문자열 불가.
+  - `sourceCode`: string, required, 제출할 전체 소스 코드. 빈 문자열 불가, 최대 10000자.
 - Response body:
   - `id`: string, required, 생성된 제출 UUID.
   - `problemNumber`: number, required, 제출 대상 문제 번호.
@@ -334,11 +334,11 @@
   - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각.
 - Status codes:
   - 201: 제출 생성 완료.
-  - 400: 요청 field 형식 오류 또는 지원하지 않는 언어.
+  - 400: 요청 field 형식 오류, 소스 코드 길이 초과, 또는 지원하지 않는 언어.
   - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
   - 404: 해당 문제 번호가 존재하지 않음.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 또는 빈 소스 코드.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 소스 코드, 또는 10000자를 초과한 소스 코드.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `PROBLEM_NOT_FOUND`: 제출 대상 문제 번호가 존재하지 않음.
   - `UNSUPPORTED_LANGUAGE`: 지원하지 않는 언어.
@@ -408,10 +408,327 @@
   - `FORBIDDEN_OPERATION`: 제출 상세 조회 권한이 없음.
   - `SUBMISSION_NOT_FOUND`: 해당 제출이 존재하지 않음.
 
+### GET /api/v1/contests
+- 설명: 접근 가능한 대회 목록을 조회한다. Authorization header가 있으면 PRIVATE contest 표시 여부 판단에 사용한다.
+- 인증: public.
+- Path params: 없음.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: array.
+  - `id`: string, required, Contest UUID, null 불가.
+  - `title`: string, required, 대회 제목, null 불가.
+  - `description`: string, required, 대회 설명, null 불가.
+  - `startTime`: string, required, 대회 시작 datetime, null 불가.
+  - `endTime`: string, required, 대회 종료 datetime, null 불가.
+  - `status`: string, required, `DRAFT`, `SCHEDULED`, `RUNNING`, `ENDED`.
+  - `visibility`: string, required, `PUBLIC`, `PRIVATE`.
+- Status codes:
+  - 200: 대회 목록 조회 성공.
+- Error cases:
+  - `AUTHENTICATION_FAILED`: Authorization header가 있지만 session이 유효하지 않음.
+
+### GET /api/v1/contests/{contestId}
+- 설명: 대회 상세와 현재 사용자의 운영진/참가자 상태를 조회한다.
+- 인증: public.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body:
+  - `id`: string, required, Contest UUID.
+  - `title`: string, required, 대회 제목.
+  - `description`: string, required, 대회 설명.
+  - `startTime`: string, required, 대회 시작 datetime.
+  - `endTime`: string, required, 대회 종료 datetime.
+  - `visibility`: string, required, `PUBLIC`, `PRIVATE`.
+  - `registrationMode`: string, required, `OPEN`, `STAFF_ONLY`.
+  - `status`: string, required, `DRAFT`, `SCHEDULED`, `RUNNING`, `ENDED`.
+  - `isStaff`: boolean, required, 현재 사용자가 ADMIN 또는 ContestStaff이면 true.
+  - `isParticipant`: boolean, required, 현재 사용자가 ContestParticipant이면 true.
+- Status codes:
+  - 200: 대회 상세 조회 성공.
+  - 403: PRIVATE 대회 조회 권한 없음.
+  - 404: 대회가 존재하지 않음.
+- Error cases:
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+  - `CONTEST_FORBIDDEN`: PRIVATE 대회 조회 권한 없음.
+
+### POST /api/v1/contests/{contestId}/join
+- 설명: 현재 인증 사용자를 OPEN 대회 참가자로 등록한다. 이미 참가한 경우도 성공한다.
+- 인증: authenticated.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body:
+  - `contestId`: string, required, Contest UUID.
+  - `joined`: boolean, required, 성공 시 항상 true.
+- Status codes:
+  - 200: 참가 완료 또는 이미 참가 중.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: STAFF_ONLY 대회 직접 참가 권한 없음.
+  - 404: 대회가 존재하지 않음.
+- Error cases:
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_FORBIDDEN`: 참가 권한 없음.
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+
+### GET /api/v1/contests/{contestId}/problems
+- 설명: 대회 전용 문제 목록과 현재 사용자의 풀이 상태를 조회한다.
+- 인증: public.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: array.
+  - `id`: string, required, ContestProblem UUID.
+  - `label`: string, required, 대회 문제 label.
+  - `title`: string, required, 대회 문제 제목.
+  - `score`: number, required, 문제 점수.
+  - `displayOrder`: number, required, 표시 순서.
+  - `solvedStatus`: string, required, `NOT_SUBMITTED`, `ATTEMPTED`, `SOLVED`. 비로그인은 `NOT_SUBMITTED`.
+- Status codes:
+  - 200: 문제 목록 조회 성공.
+  - 403: PRIVATE 대회 조회 권한 없음.
+  - 404: 대회가 존재하지 않음.
+- Error cases:
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+  - `CONTEST_FORBIDDEN`: 조회 권한 없음.
+
+### GET /api/v1/contests/{contestId}/problems/{contestProblemId}
+- 설명: 대회 전용 문제 상세를 조회한다. HIDDEN testcase는 응답에 포함하지 않는다.
+- 인증: public.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+  - `contestProblemId`: string, required, ContestProblem UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body:
+  - `id`: string, required, ContestProblem UUID.
+  - `label`: string, required, 대회 문제 label.
+  - `title`: string, required, 대회 문제 제목.
+  - `statement`: string, required, 문제 본문.
+  - `inputDescription`: string, required, 입력 설명.
+  - `outputDescription`: string, required, 출력 설명.
+  - `constraints`: string, required, 제약.
+  - `timeLimitMillis`: number, required, 시간 제한 ms.
+  - `memoryLimitKb`: number, required, 메모리 제한 KB.
+  - `score`: number, required, 문제 점수.
+  - `displayOrder`: number, required, 표시 순서.
+  - `exampleTestCases`: array, required, 공개 예제 테스트 케이스.
+  - `exampleTestCases[].caseOrder`: number, required, 예제 순서.
+  - `exampleTestCases[].input`: string, required, 예제 입력.
+  - `exampleTestCases[].output`: string, required, 예제 출력.
+- Status codes:
+  - 200: 문제 상세 조회 성공.
+  - 403: PRIVATE 대회 조회 권한 없음.
+  - 404: 대회 또는 대회 문제가 존재하지 않음.
+- Error cases:
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+  - `CONTEST_FORBIDDEN`: 조회 권한 없음.
+  - `CONTEST_PROBLEM_NOT_FOUND`: `contestProblemId`가 해당 contest에 존재하지 않음.
+
+### POST /api/v1/contests/{contestId}/problems
+- 설명: ADMIN 또는 ContestStaff가 대회 전용 문제와 testcase set을 생성한다.
+- 인증: authenticated. ADMIN 또는 ContestStaff 필요.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+- Query params: 없음.
+- Request body:
+  - `label`: string, required, 대회 문제 label.
+  - `title`: string, required, 대회 문제 제목.
+  - `statement`: string, required, 문제 본문.
+  - `inputDescription`: string, required, 입력 설명.
+  - `outputDescription`: string, required, 출력 설명.
+  - `constraints`: string, required, 제약.
+  - `timeLimitMillis`: number, required, 양수 ms.
+  - `memoryLimitKb`: number, required, 양수 KB.
+  - `score`: number, required, 양수 점수.
+  - `displayOrder`: number, required, 양수 표시 순서.
+  - `testCases`: array, required, 최소 1개 HIDDEN 포함.
+  - `testCases[].caseOrder`: number, required, 양수 순서.
+  - `testCases[].kind`: string, required, `EXAMPLE`, `HIDDEN`.
+  - `testCases[].inputText`: string, required, 빈 문자열 가능.
+  - `testCases[].outputText`: string, required, 빈 문자열 가능.
+- Response body:
+  - `id`: string, required, ContestProblem UUID.
+  - `contestId`: string, required, Contest UUID.
+  - `label`: string, required, 대회 문제 label.
+  - `title`: string, required, 대회 문제 제목.
+  - `score`: number, required, 문제 점수.
+  - `displayOrder`: number, required, 표시 순서.
+  - `exampleTestCaseCount`: number, required, EXAMPLE testcase 수.
+  - `hiddenTestCaseCount`: number, required, HIDDEN testcase 수.
+- Status codes:
+  - 201: 대회 문제 생성 완료.
+  - 400: request body 또는 enum 검증 실패.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 운영진 권한 없음.
+  - 404: 대회가 존재하지 않음.
+- Error cases:
+  - `VALIDATION_ERROR`: request body, enum, 테스트 케이스 입력 오류.
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_STAFF_REQUIRED`: ContestStaff 또는 ADMIN 권한 필요.
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+
+### PATCH /api/v1/contests/{contestId}/problems/{contestProblemId}
+- 설명: ADMIN 또는 ContestStaff가 대회 전용 문제 정의와 testcase set을 교체한다.
+- 인증: authenticated. ADMIN 또는 ContestStaff 필요.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+  - `contestProblemId`: string, required, ContestProblem UUID.
+- Query params: 없음.
+- Request body: `POST /api/v1/contests/{contestId}/problems`와 동일.
+- Response body: `POST /api/v1/contests/{contestId}/problems`와 동일.
+- Status codes:
+  - 200: 대회 문제 수정 완료.
+  - 400: request body 또는 enum 검증 실패.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 운영진 권한 없음.
+  - 404: 대회 또는 대회 문제가 존재하지 않음.
+- Error cases:
+  - `VALIDATION_ERROR`: request body, enum, 테스트 케이스 입력 오류.
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_STAFF_REQUIRED`: ContestStaff 또는 ADMIN 권한 필요.
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+  - `CONTEST_PROBLEM_NOT_FOUND`: `contestProblemId`가 해당 contest에 존재하지 않음.
+
+### DELETE /api/v1/contests/{contestId}/problems/{contestProblemId}
+- 설명: ADMIN 또는 ContestStaff가 대회 전용 문제를 삭제한다.
+- 인증: authenticated. ADMIN 또는 ContestStaff 필요.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+  - `contestProblemId`: string, required, ContestProblem UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: 없음.
+- Status codes:
+  - 204: 대회 문제 삭제 완료.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 운영진 권한 없음.
+  - 404: 대회 또는 대회 문제가 존재하지 않음.
+- Error cases:
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_STAFF_REQUIRED`: ContestStaff 또는 ADMIN 권한 필요.
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+  - `CONTEST_PROBLEM_NOT_FOUND`: `contestProblemId`가 해당 contest에 존재하지 않음.
+
+### POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions
+- 설명: 인증 사용자가 대회 전용 문제에 소스 코드를 제출한다. 기존 judge queue를 재사용해 `QUEUED` 제출을 생성한다.
+- 인증: authenticated.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+  - `contestProblemId`: string, required, ContestProblem UUID.
+- Query params: 없음.
+- Request body:
+  - `language`: string, required, `cpp17`, `python3`.
+  - `sourceCode`: string, required, 빈 문자열 불가, 최대 10000자.
+- Response body:
+  - `id`: string, required, submission UUID.
+  - `contestId`: string, required, Contest UUID.
+  - `contestProblemId`: string, required, ContestProblem UUID.
+  - `problemLabel`: string, required, 대회 문제 label.
+  - `language`: string, required, 제출 언어.
+  - `status`: string, required, 생성 직후 `QUEUED`.
+  - `submittedAt`: string, required, 제출 datetime.
+- Status codes:
+  - 201: 대회 제출 생성 완료.
+  - 400: request body, enum, 소스 코드 길이 검증 실패.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 참가하지 않았거나 제출 권한 없음.
+  - 404: 대회 또는 대회 문제가 존재하지 않음.
+- Error cases:
+  - `VALIDATION_ERROR`: request body 오류.
+  - `UNSUPPORTED_LANGUAGE`: `language`가 `cpp17`, `python3`이 아님.
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_NOT_RUNNING`: 대회가 제출 가능한 `RUNNING` 상태가 아님.
+  - `CONTEST_NOT_JOINED`: STAFF_ONLY 대회에서 참가하지 않은 사용자가 제출함.
+  - `CONTEST_PROBLEM_NOT_FOUND`: `contestProblemId`가 해당 contest에 존재하지 않음.
+
+### GET /api/v1/contests/{contestId}/submissions/me
+- 설명: 현재 인증 사용자의 대회 제출 목록을 최신순으로 조회한다.
+- 인증: authenticated.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: array.
+  - `id`: string, required, submission UUID.
+  - `contestProblemId`: string, required, ContestProblem UUID.
+  - `problemLabel`: string, required, 대회 문제 label.
+  - `submitterServiceUsername`: string, required, 제출자 service username.
+  - `language`: string, required, 제출 언어.
+  - `status`: string, required, 제출 상태 enum.
+  - `scorePercentage`: number, optional, 채점 전이면 null.
+  - `submittedAt`: string, required, 제출 datetime.
+- Status codes:
+  - 200: 내 대회 제출 목록 조회 성공.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 404: 대회가 존재하지 않음.
+- Error cases:
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+
+### GET /api/v1/contests/{contestId}/submissions
+- 설명: ADMIN 또는 ContestStaff가 대회 전체 제출 목록을 최신순으로 조회한다.
+- 인증: authenticated. ADMIN 또는 ContestStaff 필요.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: `GET /api/v1/contests/{contestId}/submissions/me`의 item array와 동일.
+- Status codes:
+  - 200: 대회 전체 제출 목록 조회 성공.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: 운영진 권한 없음.
+  - 404: 대회가 존재하지 않음.
+- Error cases:
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_STAFF_REQUIRED`: ContestStaff 또는 ADMIN 권한 필요.
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+
+### GET /api/v1/contests/{contestId}/scoreboard
+- 설명: 대회 스코어보드를 ICPC 스타일 rows와 문제 header로 조회한다.
+- 인증: public.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body:
+  - `contestId`: string, required, Contest UUID.
+  - `problems`: array, required, scoreboard 문제 header.
+  - `problems[].id`: string, required, ContestProblem UUID.
+  - `problems[].label`: string, required, 대회 문제 label.
+  - `problems[].title`: string, required, 대회 문제 제목.
+  - `problems[].score`: number, required, 문제 점수.
+  - `problems[].displayOrder`: number, required, 표시 순서.
+  - `problems[].solvedStatus`: string, required, scoreboard header에서는 `NOT_SUBMITTED`.
+  - `rows`: array, required, 참가자 순위 row.
+  - `rows[].participantId`: string, required, user account UUID.
+  - `rows[].serviceUsername`: string, required, 참가자 service username.
+  - `rows[].solvedCount`: number, required, 해결 문제 수.
+  - `rows[].penalty`: number, required, 전체 penalty minutes.
+  - `rows[].lastAcceptedAt`: string, optional, 마지막 accepted datetime 또는 null.
+  - `rows[].cells`: array, required, 문제별 결과 cell.
+  - `rows[].cells[].contestProblemId`: string, required, ContestProblem UUID.
+  - `rows[].cells[].problemLabel`: string, required, 대회 문제 label.
+  - `rows[].cells[].attempts`: number, required, solved이면 첫 AC까지 시도 수, unsolved이면 전체 시도 수.
+  - `rows[].cells[].solved`: boolean, required, solved 여부.
+  - `rows[].cells[].penalty`: number, optional, solved cell penalty 또는 null.
+  - `rows[].cells[].firstSolved`: boolean, required, 해당 문제 최초 solved 여부.
+- Status codes:
+  - 200: 스코어보드 조회 성공.
+  - 403: PRIVATE 대회 조회 권한 없음.
+  - 404: 대회가 존재하지 않음.
+- Error cases:
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+  - `CONTEST_FORBIDDEN`: 조회 권한 없음.
+
 ## 외부 API 매핑
 - `src/services/authService.ts`는 백엔드 `POST /api/v1/auth/google`, `POST /api/v1/auth/signup`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`을 호출한다.
 - `src/services/problemService.ts`는 백엔드 `GET /api/v1/problems`, `GET /api/v1/problems/{problemNumber}`, `GET /api/v1/problems/{problemNumber}/definition`, `POST /api/v1/problems`, `PATCH /api/v1/problems/{problemNumber}`를 호출한다.
 - `src/services/submissionService.ts`는 백엔드 `POST /api/v1/submissions`, `GET /api/v1/submissions/me`, `GET /api/v1/submissions/{submissionId}`를 호출한다.
+- `src/services/contestService.ts`는 백엔드 `GET /api/v1/contests`, `GET /api/v1/contests/{contestId}`, `POST /api/v1/contests/{contestId}/join`, `GET/POST/PATCH/DELETE /api/v1/contests/{contestId}/problems`, 대회 제출 목록/생성, 스코어보드 API를 호출한다.
 - 제출 생성 후 `useSubmissionDetail`은 `GET /api/v1/submissions/{submissionId}`를 호출하고 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` 상태에서는 2.5초 간격으로 다시 조회한다.
 - `POST /api/v1/problems` 호출 화면은 `ProtectedRoute requiredRole="ADMIN"`으로 관리자 세션에만 노출하고, 백엔드 403 응답도 최종 권한 경계로 처리한다.
 - 문제 상세 화면은 `subtasks`가 있으면 서브테스크 제목, 배점, 테스트 케이스 개수를 표시하고 비공개 테스트 케이스 본문은 표시하지 않는다.

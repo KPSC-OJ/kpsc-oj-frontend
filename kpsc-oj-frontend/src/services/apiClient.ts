@@ -3,7 +3,7 @@ import type { AuthApiError } from '../types/auth'
 type RequestJsonOptions = {
   accessToken?: string
   body?: unknown
-  method: 'GET' | 'PATCH' | 'POST'
+  method: 'DELETE' | 'GET' | 'PATCH' | 'POST'
   path: string
 }
 
@@ -59,6 +59,10 @@ export async function requestJson<TResponse>({
 
   if (!response.ok) {
     throw await readErrorResponse(response)
+  }
+
+  if (response.status === 204) {
+    return undefined as TResponse
   }
 
   return (await response.json()) as TResponse

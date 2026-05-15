@@ -77,7 +77,7 @@
 - Entry point: `/problems/:id/submit`
 - Preconditions: 로그인 세션이 있어야 하고 URL에 문제 번호가 포함되어야 한다.
 - Steps: `SubmitPage`가 `useProblemDetail(problemNumber)`로 `GET /api/v1/problems/{problemNumber}`를 호출해 문제 본문, 공개 예제, 서브테스크 메타데이터를 표시한다. 문제 본문의 `statementMarkdown`은 `MarkdownContent`로 렌더링해 풀이 사용자가 Markdown 원문이 아니라 렌더링된 지문과 `$...$`, `$$...$$`, `\(...\)`, `\[...\]` 수식을 보게 한다. 공개 예제 Input/Output은 `ProblemExampleBlock`으로 표시하며 각 블록의 복사 버튼은 예제 원문을 클립보드에 복사한다. 서브테스크가 있으면 제목, 배점, 비공개 테스트 케이스 개수, 선행 서브테스크 order만 표시하고 HIDDEN 테스트 케이스 본문은 표시하지 않는다. 같은 화면의 `내 제출` 탭은 `useMySubmissions(submissionListPage, problemNumber, submissionListRefreshKey)`로 해당 문제의 내 제출 목록을 조회하고 `ProblemSubmissionHistory`가 목록과 pagination을 표시한다. 사용자가 제출하면 `useCreateSubmission()`이 `POST /api/v1/submissions`를 호출한다. 생성된 제출 ID가 있으면 `useSubmissionDetail(submissionId)`가 `GET /api/v1/submissions/{submissionId}`를 호출해 채점 상태, 전체 점수, 서브테스크별 결과, 컴파일/런타임 오류 메시지를 조회한다. 각 보호 API 호출 전에는 `requestWithFreshSession()`이 access token 갱신을 처리한다. 제출 상태가 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING`이면 2.5초 후 상세 조회를 반복한다.
-- Validation: 프론트엔드는 문제 번호가 양의 정수인지, 소스 코드가 비어 있지 않은지 확인한다. 지원 언어와 문제 존재 여부는 백엔드가 최종 검증한다.
+- Validation: 프론트엔드는 문제 번호가 양의 정수인지, 소스 코드가 비어 있지 않은지, 소스 코드가 10000자를 초과하지 않는지 확인한다. 지원 언어와 문제 존재 여부는 백엔드가 최종 검증한다.
 - Empty state: 최근 제출이 없으면 제출 기록 없음 안내를 표시하고, `내 제출` 탭에서는 현재 문제에 대한 제출 기록 없음 안내를 표시한다.
 - Error state: 문제 조회 404, 제출 400/401/404, 미지원 언어 오류, 제출 상세 403/404 오류를 화면에 표시한다. 예제 복사가 실패하면 해당 복사 버튼이 실패 상태를 표시한다.
 - Permission behavior: authenticated
@@ -99,6 +99,62 @@
 - Side effects: 없음
 - Related API: `GET /api/v1/submissions/me`
 - Related DB tables: 없음
+
+## 대회 목록과 홈
+- Actor: 일반 사용자, 대회 참가자, 운영진
+- Entry point: `/contests`, `/contests/:contestId`
+- Preconditions: public contest는 비로그인 조회 가능하다. PRIVATE contest는 백엔드 권한이 필요하다.
+- Steps: `ContestsPage`는 `useContestList()`로 `GET /api/v1/contests`를 호출하고 예정/진행중/종료 그룹으로 표시한다. `ContestLayout`은 `useContest(contestId)`로 `GET /api/v1/contests/{contestId}`를 호출해 대회 상세, `isStaff`, `isParticipant`를 child route context로 제공한다. 로그인 세션이 있으면 public GET에도 `requestWithFreshSession()`을 통해 Authorization header를 붙인다. `ContestHomePage`는 문제 요약과 스코어보드 미리보기를 함께 조회하고, 참가 버튼은 `useJoinContest()`로 `POST /api/v1/contests/{contestId}/join`을 호출한 뒤 대회 상세를 재조회한다.
+- Validation: contestId 존재 여부와 PRIVATE 접근 권한은 백엔드가 최종 검증한다. 프론트는 `isStaff`와 `isParticipant`를 화면 노출 기준으로만 사용한다.
+- Empty state: 대회 목록, 문제 요약, 스코어보드 row가 없으면 빈 상태를 표시한다.
+- Error state: `CONTEST_NOT_FOUND`, `CONTEST_FORBIDDEN`, `AUTHENTICATION_FAILED`를 사용자 메시지로 표시한다.
+- Permission behavior: 조회는 public이지만 PRIVATE contest는 백엔드 권한을 따른다. 참가 API는 authenticated.
+- Retry or recovery: 대회 홈에서 참가 요청을 다시 시도하거나 목록으로 돌아갈 수 있다.
+- Side effects: 참가 성공 시 `isParticipant` 상태가 true로 갱신된다.
+- Related API: `GET /api/v1/contests`, `GET /api/v1/contests/{contestId}`, `POST /api/v1/contests/{contestId}/join`, `GET /api/v1/contests/{contestId}/problems`, `GET /api/v1/contests/{contestId}/scoreboard`
+- Related DB tables: 백엔드 contest 관련 table
+
+## 대회 문제 풀이와 제출
+- Actor: 대회 참가자
+- Entry point: `/contests/:contestId/problems`, `/contests/:contestId/problems/:contestProblemId`
+- Preconditions: 대회 상세 조회가 가능해야 한다. 제출은 로그인 세션, `RUNNING` 상태, 참가 상태가 필요하다.
+- Steps: `ContestProblemsPage`는 `useContestProblems(contestId)`로 대회 문제 목록과 `solvedStatus`를 조회한다. `ContestProblemDetailPage`는 `useContestProblem(contestId, contestProblemId)`로 문제 본문, 입력/출력 설명, 제약, EXAMPLE testcase만 표시한다. 제출 폼은 기존 `CodeEditor`를 재사용하되 `useSubmitContestProblem()`으로 `POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions`를 호출한다. 제출 성공 후 `useContestSubmissions(contestId, 'mine', ..., true)`가 내 대회 제출 목록을 polling해 상태 변화를 표시한다.
+- Validation: 프론트는 sourceCode 공백과 10000자 초과를 확인한다. `language`, contest 상태, 참가 여부, 문제 존재 여부는 백엔드가 최종 검증한다.
+- Empty state: 문제 목록이나 해당 문제 제출 기록이 없으면 빈 상태를 표시한다.
+- Error state: `CONTEST_NOT_RUNNING`, `CONTEST_NOT_JOINED`, `CONTEST_PROBLEM_NOT_FOUND`, `UNSUPPORTED_LANGUAGE`, `VALIDATION_ERROR`를 사용자 메시지로 표시한다.
+- Permission behavior: 문제 상세 조회는 public 계약을 따르며, 제출 API는 authenticated. STAFF_ONLY에서 참가하지 않은 일반 사용자는 백엔드가 거부한다.
+- Retry or recovery: 사용자는 참가 후 다시 제출하거나 소스 코드를 수정해 재제출할 수 있다.
+- Side effects: 성공 시 contest submission이 `QUEUED`로 생성되고 기존 judge queue가 채점한다.
+- Related API: `GET /api/v1/contests/{contestId}/problems`, `GET /api/v1/contests/{contestId}/problems/{contestProblemId}`, `POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions`, `GET /api/v1/contests/{contestId}/submissions/me`
+- Related DB tables: 백엔드 contest submissions table
+
+## 대회 운영진 문제 관리
+- Actor: ContestStaff 또는 ADMIN
+- Entry point: `/contests/:contestId/manage/problems/new`, `/contests/:contestId/manage/problems/:contestProblemId/edit`
+- Preconditions: `GET /api/v1/contests/{contestId}`의 `isStaff=true`여야 화면을 표시한다. 백엔드의 `CONTEST_STAFF_REQUIRED`가 최종 권한 경계다.
+- Steps: `ContestProblemNewPage`와 `ContestProblemEditPage`는 `ContestProblemForm`을 사용해 label, title, statement, input/output description, constraints, time/memory limit, score, displayOrder, EXAMPLE/HIDDEN testcase를 입력받는다. 생성은 `POST /api/v1/contests/{contestId}/problems`, 수정은 `PATCH /api/v1/contests/{contestId}/problems/{contestProblemId}`, 삭제는 `DELETE /api/v1/contests/{contestId}/problems/{contestProblemId}`를 호출한다. 현재 상세 API는 HIDDEN testcase를 반환하지 않으므로 수정 화면은 공개 상세 필드와 EXAMPLE testcase를 초기값으로 사용하고 저장 시 입력된 testcase set으로 교체한다.
+- Validation: 프론트는 필수 텍스트, 양수 숫자, testcase order 양수/중복, HIDDEN testcase 최소 1개를 확인한다. enum과 DB 제약, 제출이 연결된 문제 삭제 가능 여부는 백엔드가 최종 검증한다.
+- Empty state: 새 문제 생성은 빈 폼을 표시한다.
+- Error state: `CONTEST_STAFF_REQUIRED`, `CONTEST_PROBLEM_NOT_FOUND`, `VALIDATION_ERROR`를 사용자 메시지로 표시한다.
+- Permission behavior: 운영진 UI는 `isStaff`가 true일 때만 노출한다. `isStaff=false`이면 manage route에서 대회 홈으로 이동한다.
+- Retry or recovery: 오류 수정 후 같은 폼에서 다시 저장할 수 있고, 삭제 실패 시 목록으로 돌아가지 않는다.
+- Side effects: 성공 시 ContestProblem과 testcase set이 생성/수정/삭제된다.
+- Related API: `POST /api/v1/contests/{contestId}/problems`, `PATCH /api/v1/contests/{contestId}/problems/{contestProblemId}`, `DELETE /api/v1/contests/{contestId}/problems/{contestProblemId}`
+- Related DB tables: 백엔드 contest problem/testcase table
+
+## 대회 제출과 스코어보드 조회
+- Actor: 대회 참가자, 운영진, 일반 조회자
+- Entry point: `/contests/:contestId/submissions`, `/contests/:contestId/scoreboard`
+- Preconditions: 내 제출 조회는 로그인 세션이 필요하다. 전체 제출 조회는 `isStaff=true` 사용자에게만 UI를 제공하며 백엔드 운영진 권한이 필요하다. 스코어보드는 public 계약을 따른다.
+- Steps: `ContestSubmissionsPage`는 `useContestSubmissions(contestId, 'mine')`로 내 제출을 조회하고, 운영진이면 scope를 `all`로 바꿔 `GET /api/v1/contests/{contestId}/submissions`를 호출할 수 있다. `ContestScoreboardPage`는 `useContestScoreboard(contestId)`로 `GET /api/v1/contests/{contestId}/scoreboard`를 호출하고 `ContestScoreboardTable`이 rank, user, solvedCount, penalty, 문제별 cell을 가로 스크롤 테이블로 표시한다.
+- Validation: 제출 목록 scope는 UI state로 관리한다. 스코어보드 정렬과 penalty 계산은 백엔드가 수행한다.
+- Empty state: 제출 또는 스코어보드 row가 없으면 빈 상태를 표시한다.
+- Error state: 인증 실패, 운영진 권한 없음, 대회 없음, PRIVATE 접근 권한 없음 오류를 사용자 메시지로 표시한다.
+- Permission behavior: 전체 제출 UI는 `isStaff=true`일 때만 노출한다. 스코어보드 조회는 public 계약을 따른다.
+- Retry or recovery: 스코어보드는 새로고침 버튼으로 다시 조회한다.
+- Side effects: 없음
+- Related API: `GET /api/v1/contests/{contestId}/submissions/me`, `GET /api/v1/contests/{contestId}/submissions`, `GET /api/v1/contests/{contestId}/scoreboard`
+- Related DB tables: 백엔드 contest submissions/scoreboard 관련 table
 
 ## 랭킹 조회
 - Actor: 일반 사용자

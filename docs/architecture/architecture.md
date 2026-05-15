@@ -2,7 +2,7 @@
 
 ## 요약
 kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
-현재 구현은 인증, 문제 목록, 문제 상세/서브테스크 메타데이터, 문제 생성/수정, 제출 생성, 제출 상세/채점 결과, 내 제출 목록 화면에서 백엔드 REST API를 호출한다.
+현재 구현은 인증, 문제 목록, 문제 상세/서브테스크 메타데이터, 문제 생성/수정, 제출 생성, 제출 상세/채점 결과, 내 제출 목록, Contest 목록/홈/문제/제출/스코어보드/운영진 문제 관리 화면에서 백엔드 REST API를 호출한다.
 백엔드 연결을 위해 화면 조립, UI 컴포넌트, service, 상태 저장소 경계를 분리한다.
 
 ## 기본 정보
@@ -11,6 +11,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 - 데이터베이스: 프론트엔드 직접 사용 없음
 - 인증 사용: Google ID token 기반 백엔드 로그인, signup, token refresh, logout, session role 연동
 - 문제/제출 사용: authenticated backend API 연동. 문제 상세는 서브테스크 메타데이터를 포함하고, 제출 상세는 서브테스크별 결과를 표시한다.
+- Contest 사용: public 조회 가능한 Contest REST API 연동. 로그인 세션이 있으면 GET 요청에도 Authorization header를 붙여 PRIVATE 접근과 `isStaff`/`isParticipant` 권한 정보를 정확히 받는다.
 - 테마 사용: 사용자 선택 라이트/다크 모드를 localStorage에 저장하고 전역 `data-theme` 속성으로 반영
 - 관리자 문제 생성: `ADMIN` role 세션에만 화면 노출, backend problem creation API 연동
 - 문제 수정: 문제 목록 응답의 생성자 정보로 본인이 출제한 문제에만 수정 진입 노출, backend problem definition API에서 생성자 권한 최종 검증
@@ -30,7 +31,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 
 ## React 아키텍처 메모
 - page는 라우팅 단위 화면 조립을 담당한다.
-- layout은 Public, App, Problem Workspace 화면 경계를 담당한다. Public/App은 공통 Header/Footer를 사용하고, Problem Workspace는 화면 높이를 editor에 배정하기 위해 Header만 사용한다.
+- layout은 Public, App, Contest, Problem Workspace 화면 경계를 담당한다. Public/App은 공통 Header/Footer를 사용하고, Contest는 대회별 전용 내비게이션을 제공하며, Problem Workspace는 화면 높이를 editor에 배정하기 위해 Header만 사용한다.
 - component는 재사용 가능한 UI와 표시 책임을 담당한다.
 - service는 API 호출과 공통 오류 정규화를 담당한다.
 - store는 인증 session, session role, signup pending 상태, theme mode, localStorage persistence를 담당한다.
@@ -40,6 +41,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 ## 흐름 메모
 - 문제 데이터 흐름: Page -> Hook -> Problem service -> Backend API. 문제 상세/정의 응답의 `subtasks`와 `prerequisiteSubtaskOrders`는 hook에서 UI view model로 변환한다.
 - 제출 데이터 흐름: Page -> Hook -> Submission service -> Backend API. 제출 생성 후 상세 결과는 `useSubmissionDetail`이 조회하고 진행 중 상태에서는 polling하며, `totalScore`와 `subtaskResults`를 결과 패널에 표시한다.
+- Contest 데이터 흐름: Page -> Contest hook -> Contest service -> Backend API. Contest DTO는 `src/types/contestApi.ts`, 화면 모델은 `src/types/contest.ts`로 분리한다. ContestProblem은 일반 Problem과 다른 타입으로 취급한다.
 - 인증 흐름: Google Identity Services 버튼 -> LoginPage -> Auth store -> Auth service -> Backend auth API -> 기존 사용자 세션 저장 또는 최초 로그인 회원가입 대기 -> signup 완료 후 세션 저장
 - 테마 흐름: SiteHeader ThemeModeToggle -> Theme store -> localStorage 저장 -> document `data-theme`와 Monaco editor theme 반영
 - API 흐름: Page -> Hook/Store -> Service -> Backend API
@@ -51,6 +53,14 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | --- | --- | --- | --- |
 | `/` | PublicLayout | HomePage | 공개 홈 대시보드 |
 | `/login` | PublicLayout | LoginPage | Google ID token 기반 로그인과 signup |
+| `/contests` | AppLayout | ContestsPage | 공개/권한 기반 대회 목록 |
+| `/contests/:contestId` | AppLayout + ContestLayout | ContestHomePage | 대회 홈, 참가 상태, 문제 요약, 스코어보드 미리보기 |
+| `/contests/:contestId/problems` | AppLayout + ContestLayout | ContestProblemsPage | 대회 전용 문제 목록과 운영진 관리 액션 |
+| `/contests/:contestId/problems/:contestProblemId` | AppLayout + ContestLayout | ContestProblemDetailPage | 대회 문제 상세와 대회 제출 폼 |
+| `/contests/:contestId/submissions` | AppLayout + ContestLayout | ContestSubmissionsPage | 내 대회 제출, 운영진이면 전체 제출 조회 |
+| `/contests/:contestId/scoreboard` | AppLayout + ContestLayout | ContestScoreboardPage | ICPC 스타일 대회 스코어보드 |
+| `/contests/:contestId/manage/problems/new` | AppLayout + ContestLayout | ContestProblemNewPage | `isStaff=true` 사용자만 사용하는 대회 문제 생성 폼 |
+| `/contests/:contestId/manage/problems/:contestProblemId/edit` | AppLayout + ContestLayout | ContestProblemEditPage | `isStaff=true` 사용자만 사용하는 대회 문제 수정/삭제 폼 |
 | `/problems` | AppLayout + ProtectedRoute | ProblemsPage | 인증된 문제 목록 |
 | `/problems/:id` | AppLayout | Redirect | `/problems/:id/submit`으로 즉시 이동 |
 | `/problems/:id/submit` | ProblemWorkspaceLayout + ProtectedRoute | SubmitPage | 인증된 제출 작업 화면 |
@@ -87,3 +97,4 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | 2026-05-14 | 라이트/다크 모드는 전역 ThemeProvider가 관리한다. | 개발자가 장시간 사용하는 온라인 저지 UI에서 눈 피로를 줄이기 위해 사용자 선택 색상 모드가 필요하다. | `ThemeModeToggle`은 Header에서 모드를 전환하고, `ThemeProvider`는 `kpsc_oj_theme_mode` localStorage 값과 document `data-theme` 속성을 관리한다. |
 | 2026-05-14 | Markdown 수식 렌더링은 `MarkdownContent`에서 LaTeX delimiter를 정규화한다. | `remark-math`는 `$...$` 중심 문법을 처리하며, Markdown parser가 `\(...\)`와 `\[...\]`를 일반 escape로 소비해 일부 수식이 텍스트로 남을 수 있기 때문이다. | `MarkdownContent`가 code fence와 inline code를 보존한 뒤 `\(...\)`, `\[...\]`, 한 줄짜리 독립 `$$...$$`를 `remark-math`가 인식하는 형태로 변환한다. |
 | 2026-05-14 | 서브테스크 선행 관계는 문제 정의 폼에서 입력한다. | 백엔드 문제 생성/수정 계약에 `subtasks[].prerequisiteSubtaskOrders`가 추가되어 서브테스크 점수 획득 조건을 표현해야 한다. | `ProblemDefinitionForm`은 선행 order 입력을 검증해 request DTO로 변환하고, `SubmitPage`는 문제 상세의 선행 order 메타데이터를 표시한다. |
+| 2026-05-15 | Contest 페이지는 일반 Problem 흐름과 분리된 Contest 전용 타입, service, hook, layout을 사용한다. | ContestProblem, ContestParticipant, Scoreboard는 일반 문제/제출 계약과 필드 및 권한이 다르기 때문이다. | `/contests/:contestId/*` 라우트는 `ContestLayout`과 `contestService`를 사용하고, 운영진 UI는 `GET /api/v1/contests/{contestId}`의 `isStaff`를 기준으로 표시한다. |

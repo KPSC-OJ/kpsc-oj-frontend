@@ -16,7 +16,15 @@
 | Example copy feedback state | `ProblemExampleBlock` | React state | No | 예제 Input/Output 복사 버튼의 idle/copied/failed 표시 상태 |
 | Problem definition form state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 request DTO로 변환되는 제목, 태그, 제한, Markdown 본문, 커스텀 checker 사용 여부와 optional checker code, 예제/일반 실제 테스트 케이스, 서브테스크 사용 여부, 서브테스크별 테스트 케이스와 선행 order 입력값 |
 | Problem mutation result state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 성공 응답과 오류 메시지 표시 상태 |
-| Code editor UI state | `SubmitPage` | React state | No | Monaco Editor의 선택 언어와 현재 소스 코드 |
+| Code editor UI state | `SubmitPage` | React state | No | Monaco Editor의 선택 언어와 현재 소스 코드. 제출 소스 코드는 최대 10000자까지 허용한다. |
+| Contest list state | `useContestList` | Backend API | No | `GET /api/v1/contests` 응답에서 변환한 대회 목록과 status group 표시 상태 |
+| Contest detail state | `useContest` | Backend API | No | `GET /api/v1/contests/{contestId}` 응답에서 변환한 대회 상세, `isStaff`, `isParticipant` 상태 |
+| Contest problem list state | `useContestProblems` | Backend API | No | `GET /api/v1/contests/{contestId}/problems` 응답에서 변환한 ContestProblem 목록과 solvedStatus |
+| Contest problem detail state | `useContestProblem` | Backend API | No | `GET /api/v1/contests/{contestId}/problems/{contestProblemId}` 응답에서 변환한 ContestProblem 상세와 EXAMPLE testcase |
+| Contest problem form state | `ContestProblemForm` | React state | No | ContestProblem mutation request DTO로 변환되는 label, title, statement, input/output description, constraints, limits, score, displayOrder, EXAMPLE/HIDDEN testcase 입력값 |
+| Contest submission list state | `useContestSubmissions` | Backend API | No | 내 대회 제출 또는 운영진 전체 제출 목록. 채점 중 제출이 있으면 2.5초 간격으로 목록을 polling한다. |
+| Contest created submission state | `ContestProblemDetailPage` | React state | No | 대회 문제 제출 성공 응답 표시 상태 |
+| Contest scoreboard state | `useContestScoreboard` | Backend API | No | `GET /api/v1/contests/{contestId}/scoreboard` 응답에서 변환한 문제 header와 row/cell 상태 |
 | Theme mode state | `ThemeProvider` | React state + localStorage | Yes | 라이트/다크 모드 선택값. `kpsc_oj_theme_mode` localStorage key와 document `data-theme` 속성으로 반영한다. |
 | Auth session state | `AuthProvider` | React state + localStorage | Yes | access token, refresh token, token type, 만료 시각, service username, role |
 | Pending signup state | `AuthProvider` | React state | No | `requiresSignup=true` 로그인 응답에서 생성되는 signup token과 검증된 Google email |
@@ -42,6 +50,19 @@
 | `SubmissionStatus` | string | 백엔드가 반환하는 제출 상태 enum | Depends | 프론트엔드는 알 수 없는 상태도 원문으로 표시한다. |
 | `SubmissionSubtaskResultStatus` | `ACCEPTED` | 해당 서브테스크의 HIDDEN 테스트 케이스 모두 통과 | Yes | 서브테스크 결과 배지로 표시 |
 | `SubmissionSubtaskResultStatus` | `FAILED` | 해당 서브테스크의 HIDDEN 테스트 케이스 중 하나 이상 실패 | Yes | 서브테스크 결과 배지로 표시 |
+| `ContestVisibilityDto` | `PUBLIC` | 비로그인 조회 가능한 대회 | No | GET Contest API 공개 범위 |
+| `ContestVisibilityDto` | `PRIVATE` | ADMIN, ContestStaff, ContestParticipant만 조회 가능한 대회 | No | 백엔드가 최종 권한 검증 |
+| `ContestRegistrationModeDto` | `OPEN` | 일반 사용자가 직접 참가 가능한 대회 | No | `POST /api/v1/contests/{contestId}/join` 허용 |
+| `ContestRegistrationModeDto` | `STAFF_ONLY` | 운영진 또는 ADMIN이 참가를 제한하는 대회 | No | 일반 사용자 직접 참가/미참가 제출은 백엔드가 거부 |
+| `ContestStatusDto` | `DRAFT` | 초안 대회 | No | 프론트는 초안 배지로 표시 |
+| `ContestStatusDto` | `SCHEDULED` | 시작 전 예정 대회 | No | 프론트는 예정 배지로 표시 |
+| `ContestStatusDto` | `RUNNING` | 진행 중 대회 | No | 대회 제출 가능 상태 |
+| `ContestStatusDto` | `ENDED` | 종료된 대회 | Yes | 제출 불가, 스코어보드 조회 가능 |
+| `ContestProblemSolvedStatusDto` | `NOT_SUBMITTED` | 해당 대회 문제에 제출하지 않음 | No | 비로그인은 이 값으로 표시 |
+| `ContestProblemSolvedStatusDto` | `ATTEMPTED` | 제출했지만 해결하지 못함 | No | 대회 문제 목록 배지 |
+| `ContestProblemSolvedStatusDto` | `SOLVED` | 해당 대회 문제 해결 | Yes | 대회 문제 목록 배지 |
+| `ContestProblemTestCaseKindDto` | `EXAMPLE` | 공개 예제 testcase | No | 문제 상세에 표시 가능 |
+| `ContestProblemTestCaseKindDto` | `HIDDEN` | 채점용 비공개 testcase | No | 일반 문제 상세에는 표시하지 않음 |
 | `ThemeMode` | `light` | 화이트 모드 | No | 기본 밝은 UI. 저장값이 없고 시스템 다크 선호가 아니면 사용 |
 | `ThemeMode` | `dark` | 다크 모드 | No | 어두운 UI. 저장값이 없으면 시스템 다크 선호를 초기값으로 사용할 수 있음 |
 | `AuthUserRole` | `USER` | 일반 사용자 | No | 문제 생성 화면 진입 불가 |
@@ -52,6 +73,9 @@
 | --- | --- | --- | --- | --- |
 | none | `QUEUED` | 사용자가 `POST /api/v1/submissions`로 제출 생성 | Backend service | 생성된 제출 ID와 제출 시각을 화면에 표시한다. |
 | `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` | terminal status | 백엔드 비동기 채점 완료 후 상세 조회 | Backend processor | `useSubmissionDetail`이 2.5초 간격으로 상세 조회를 반복해 결과를 갱신한다. 서브테스크 문제는 `totalScore`와 `subtaskResults`로 획득 점수를 표시한다. |
+| not participant | participant | 사용자가 `POST /api/v1/contests/{contestId}/join` 호출 | Backend contest service | `ContestLayout`이 대회 상세을 재조회해 `isParticipant=true`를 반영한다. |
+| none | `QUEUED` | 사용자가 `POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions`로 대회 제출 생성 | Backend service | 생성된 contest submission ID와 제출 시각을 표시하고 대회 제출 목록 polling을 시작한다. |
+| `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` | terminal status | 백엔드 비동기 채점 완료 후 대회 제출 목록 조회 | Backend processor | `useContestSubmissions`가 2.5초 간격으로 목록을 재조회해 상태를 갱신한다. |
 | `light` | `dark` | 사용자가 Header 테마 버튼 클릭 | ThemeProvider | localStorage와 document `data-theme`를 갱신하고 Monaco editor를 dark theme로 표시한다. |
 | `dark` | `light` | 사용자가 Header 테마 버튼 클릭 | ThemeProvider | localStorage와 document `data-theme`를 갱신하고 Monaco editor를 light theme로 표시한다. |
 | persisted auth session | refreshed auth session | access token 만료 60초 전 또는 보호 API 401 응답 | `POST /api/v1/auth/refresh` | 새 access token, refresh token, 만료 시각을 localStorage에 저장한다. |

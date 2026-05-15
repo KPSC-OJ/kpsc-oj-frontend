@@ -14,9 +14,10 @@ import { useProblemDetail } from '../hooks/useProblemDetail'
 import { useSubmissionDetail } from '../hooks/useSubmissionDetail'
 import type { AuthApiError } from '../types/auth'
 import type { SubmissionDetail, SubmissionSubtaskResult } from '../types/submission'
-import type {
-  CreateSubmissionResponseDto,
-  SubmissionLanguageDto,
+import {
+  SUBMISSION_SOURCE_CODE_MAX_LENGTH,
+  type CreateSubmissionResponseDto,
+  type SubmissionLanguageDto,
 } from '../types/submissionApi'
 
 const defaultSourceCode = `#include <iostream>
@@ -28,6 +29,9 @@ int main() {
     cout << a + b << '\\n';
     return 0;
 }`
+
+const formattedSubmissionSourceCodeMaxLength =
+  SUBMISSION_SOURCE_CODE_MAX_LENGTH.toLocaleString('ko-KR')
 
 const submissionLanguageOptions: Array<{
   editorLanguage: CodeEditorLanguage
@@ -177,6 +181,11 @@ export function SubmitPage() {
   const submissionDiagnosticMessage = submissionDetail
     ? getSubmissionDiagnosticMessage(submissionDetail)
     : null
+  const isSourceCodeOverLimit = sourceCode.length > SUBMISSION_SOURCE_CODE_MAX_LENGTH
+  const sourceCodeLengthClassName = [
+    'text-xs font-bold',
+    isSourceCodeOverLimit ? 'text-rose-600' : 'text-slate-400',
+  ].join(' ')
 
   async function submitSourceCode(): Promise<void> {
     if (!problem) {
@@ -185,6 +194,14 @@ export function SubmitPage() {
 
     if (!sourceCode.trim()) {
       setSubmitErrorMessage('제출할 소스 코드를 입력해야 합니다.')
+
+      return
+    }
+
+    if (isSourceCodeOverLimit) {
+      setSubmitErrorMessage(
+        `제출할 소스 코드는 최대 ${formattedSubmissionSourceCodeMaxLength}자까지 입력할 수 있습니다.`,
+      )
 
       return
     }
@@ -338,6 +355,10 @@ export function SubmitPage() {
               <div className="text-xs font-bold uppercase text-slate-400">코드 작성</div>
               <div className="mt-1 text-sm font-black text-slate-950">
                 solution.{selectedLanguage === 'cpp17' ? 'cpp' : 'py'}
+              </div>
+              <div className={sourceCodeLengthClassName}>
+                {sourceCode.length.toLocaleString('ko-KR')} /{' '}
+                {formattedSubmissionSourceCodeMaxLength}자
               </div>
             </div>
             <div className="flex items-center gap-2">

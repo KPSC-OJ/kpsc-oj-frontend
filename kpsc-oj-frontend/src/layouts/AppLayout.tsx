@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { BookOpen, ClipboardList, ShieldPlus, Trophy } from 'lucide-react'
+import { BookOpen, ClipboardList, Medal, ShieldPlus, Trophy } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { SiteFooter } from '../components/layout/SiteFooter'
 import { SiteHeader } from '../components/layout/SiteHeader'
@@ -14,6 +14,7 @@ type AppNavigationItem = {
 
 const navigationItems: AppNavigationItem[] = [
   { icon: BookOpen, label: 'Problems', to: '/problems' },
+  { icon: Medal, label: 'Contests', to: '/contests' },
   { icon: ClipboardList, label: 'Submissions', to: '/submissions' },
   { icon: Trophy, label: 'Ranking', to: '/ranking' },
   { adminOnly: true, icon: ShieldPlus, label: 'Admin', to: '/admin/problems/new' },

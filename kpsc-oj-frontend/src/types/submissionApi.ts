@@ -1,5 +1,7 @@
 export type SubmissionLanguageDto = 'cpp17' | 'python3'
 
+export const SUBMISSION_SOURCE_CODE_MAX_LENGTH = 10000
+
 export type CreateSubmissionRequestDto = {
   problemNumber: number
   language: SubmissionLanguageDto

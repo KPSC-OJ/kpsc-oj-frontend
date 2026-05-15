@@ -13,6 +13,7 @@ type HeaderNavigationItem = {
 
 const navigationItems: HeaderNavigationItem[] = [
   { label: '문제', to: '/problems' },
+  { label: '대회', to: '/contests' },
   { label: '제출', to: '/submissions' },
   { label: '랭킹', to: '/ranking' },
   { adminOnly: true, label: '출제', to: '/admin/problems/new' },

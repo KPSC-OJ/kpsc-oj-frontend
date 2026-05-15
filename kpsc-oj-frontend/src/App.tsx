@@ -1,10 +1,19 @@
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { AppLayout } from './layouts/AppLayout'
+import { ContestLayout } from './layouts/ContestLayout'
 import { ProblemWorkspaceLayout } from './layouts/ProblemWorkspaceLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { AdminProblemEditPage } from './pages/AdminProblemEditPage'
 import { AdminProblemNewPage } from './pages/AdminProblemNewPage'
+import { ContestHomePage } from './pages/ContestHomePage'
+import { ContestProblemDetailPage } from './pages/ContestProblemDetailPage'
+import { ContestProblemEditPage } from './pages/ContestProblemEditPage'
+import { ContestProblemNewPage } from './pages/ContestProblemNewPage'
+import { ContestProblemsPage } from './pages/ContestProblemsPage'
+import { ContestScoreboardPage } from './pages/ContestScoreboardPage'
+import { ContestSubmissionsPage } from './pages/ContestSubmissionsPage'
+import { ContestsPage } from './pages/ContestsPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { ProblemsPage } from './pages/ProblemsPage'
@@ -32,6 +41,19 @@ function App() {
             </Route>
 
             <Route element={<AppLayout />}>
+              <Route path="contests" element={<ContestsPage />} />
+              <Route path="contests/:contestId" element={<ContestLayout />}>
+                <Route index element={<ContestHomePage />} />
+                <Route path="problems" element={<ContestProblemsPage />} />
+                <Route path="problems/:contestProblemId" element={<ContestProblemDetailPage />} />
+                <Route path="submissions" element={<ContestSubmissionsPage />} />
+                <Route path="scoreboard" element={<ContestScoreboardPage />} />
+                <Route path="manage/problems/new" element={<ContestProblemNewPage />} />
+                <Route
+                  path="manage/problems/:contestProblemId/edit"
+                  element={<ContestProblemEditPage />}
+                />
+              </Route>
               <Route
                 path="problems"
                 element={

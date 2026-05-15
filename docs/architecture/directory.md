@@ -11,6 +11,7 @@
 | `kpsc-oj-frontend/src/layouts` | directory | 라우트별 화면 경계 | Presentation layout | Public, App, Problem Workspace layout을 포함한다. |
 | `kpsc-oj-frontend/src/layouts/PublicLayout.tsx` | file | 공개 홈 레이아웃 | Presentation layout | 공통 Header/Footer와 outlet을 조립한다. |
 | `kpsc-oj-frontend/src/layouts/AppLayout.tsx` | file | 앱 내부 레이아웃 | Presentation layout | 공통 Header/Footer, 사이드 내비게이션, outlet을 조립한다. |
+| `kpsc-oj-frontend/src/layouts/ContestLayout.tsx` | file | 대회별 화면 레이아웃 | Presentation layout | 대회 상세를 조회하고 대회 전용 네비게이션과 child route context를 제공한다. |
 | `kpsc-oj-frontend/src/layouts/ProblemWorkspaceLayout.tsx` | file | 문제 제출 작업 레이아웃 | Presentation layout | 공통 Header와 제출 화면 outlet을 조립하며 Footer 없이 화면 높이를 editor에 배정한다. |
 | `kpsc-oj-frontend/src/pages` | directory | 라우팅 단위 화면 조립 | Page | hook 호출 후 컴포넌트에 props를 전달한다. |
 | `kpsc-oj-frontend/src/pages/HomePage.tsx` | file | 홈 대시보드 | Page | 공개 홈 화면을 조립한다. |
@@ -21,10 +22,19 @@
 | `kpsc-oj-frontend/src/pages/RankingPage.tsx` | file | 랭킹 | Page | 백엔드 랭킹 계약이 없어 준비 상태를 표시한다. |
 | `kpsc-oj-frontend/src/pages/AdminProblemNewPage.tsx` | file | 문제 생성 폼 | Page | 문제 생성 공용 폼에 생성 hook을 연결한다. |
 | `kpsc-oj-frontend/src/pages/AdminProblemEditPage.tsx` | file | 문제 수정 폼 | Page | 라우트 문제 번호를 검증하고 문제 정의 조회/수정 hook을 공용 폼에 연결한다. |
+| `kpsc-oj-frontend/src/pages/ContestsPage.tsx` | file | 대회 목록 | Page | Contest 목록 hook 상태를 예정/진행중/종료 그룹으로 표시한다. |
+| `kpsc-oj-frontend/src/pages/ContestHomePage.tsx` | file | 대회 홈 | Page | 대회 상세 context, 문제 요약, 참가 상태, 스코어보드 미리보기를 조립한다. |
+| `kpsc-oj-frontend/src/pages/ContestProblemsPage.tsx` | file | 대회 문제 목록 | Page | ContestProblem 목록과 운영진 문제 생성/수정/삭제 진입을 조립한다. |
+| `kpsc-oj-frontend/src/pages/ContestProblemDetailPage.tsx` | file | 대회 문제 상세/제출 | Page | ContestProblem 상세, 예제, Monaco 제출 폼, 내 대회 제출 목록을 조립한다. |
+| `kpsc-oj-frontend/src/pages/ContestSubmissionsPage.tsx` | file | 대회 제출 목록 | Page | 내 대회 제출 목록과 운영진 전체 제출 목록 toggle을 조립한다. |
+| `kpsc-oj-frontend/src/pages/ContestScoreboardPage.tsx` | file | 대회 스코어보드 | Page | Contest scoreboard hook 상태를 ICPC 테이블로 표시한다. |
+| `kpsc-oj-frontend/src/pages/ContestProblemNewPage.tsx` | file | 대회 문제 생성 | Page | `isStaff` context를 확인하고 ContestProblem 생성 폼과 hook을 연결한다. |
+| `kpsc-oj-frontend/src/pages/ContestProblemEditPage.tsx` | file | 대회 문제 수정/삭제 | Page | `isStaff` context를 확인하고 ContestProblem 수정/삭제 hook을 연결한다. |
 | `kpsc-oj-frontend/src/components/common` | directory | 공통 UI 컴포넌트 | Shared UI | Button, Badge, Card, MarkdownContent를 포함한다. MarkdownContent는 Markdown과 LaTeX 수식 표시를 담당한다. |
 | `kpsc-oj-frontend/src/components/auth` | directory | 인증 UI 컴포넌트 | Auth UI | GoogleIdentityButton을 포함한다. |
 | `kpsc-oj-frontend/src/components/auth/ProtectedRoute.tsx` | file | 인증/role 보호 라우트 경계 | Auth route UI | 로그인 세션이 없는 사용자를 `/login`으로 이동시키고, 필요한 role이 없으면 보호 화면을 조립하지 않는다. |
 | `kpsc-oj-frontend/src/components/layout` | directory | 전역 레이아웃 UI 컴포넌트 | Shared layout UI | SiteHeader, SiteFooter, ThemeModeToggle을 포함한다. |
+| `kpsc-oj-frontend/src/components/contest` | directory | 대회 도메인 표시/입력 컴포넌트 | Feature UI | Contest 배지, 전용 네비게이션, 문제 폼, 제출 테이블, 스코어보드 테이블을 포함한다. |
 | `kpsc-oj-frontend/src/components/problem` | directory | 문제 도메인 표시/입력 컴포넌트 | Feature UI | `ProblemTable`, `ProblemExampleBlock`, `ProblemDefinitionForm`, `CheckerGuide`를 포함한다. |
 | `kpsc-oj-frontend/src/components/problem/ProblemExampleBlock.tsx` | file | 예제 입출력 표시 | Feature UI | 제출 화면의 공개 예제 Input/Output 원문과 클립보드 복사 버튼을 표시한다. |
 | `kpsc-oj-frontend/src/components/problem/ProblemDefinitionForm.tsx` | file | 문제 정의 입력 폼 | Feature UI | 문제 생성/수정에서 공유하는 제목, 제한, 본문, checker, 일반/서브테스크 테스트 케이스, 서브테스크 선행 관계 입력과 client-side validation을 담당한다. |
@@ -40,9 +50,13 @@
 | `kpsc-oj-frontend/src/hooks/useCreateSubmission.ts` | file | 제출 생성 hook | Application hook | auth store가 갱신한 access token으로 제출 생성 service를 호출한다. |
 | `kpsc-oj-frontend/src/hooks/useMySubmissions.ts` | file | 내 제출 목록 hook | Application hook | 내 제출 목록 API 응답을 UI 모델로 변환한다. |
 | `kpsc-oj-frontend/src/hooks/useSubmissionDetail.ts` | file | 제출 상세 hook | Application hook | 제출 상세 API 응답을 UI 모델로 변환하고 진행 중 상태를 polling한다. |
+| `kpsc-oj-frontend/src/hooks/useContestData.ts` | file | Contest 유스케이스 hook | Application hook | Contest 목록/상세/문제/제출/스코어보드 API 응답을 UI 모델로 변환하고 대회 제출 목록 polling과 운영진 mutation을 캡슐화한다. |
+| `kpsc-oj-frontend/src/hooks/contestErrorMessage.ts` | file | Contest 오류 메시지 정규화 | Application hook helper | Contest API error code를 사용자 메시지로 변환한다. |
 | `kpsc-oj-frontend/src/services` | directory | 백엔드 API client와 service | Service/API boundary | auth API 호출, token refresh API 호출, 공통 JSON/error 처리를 담당한다. |
+| `kpsc-oj-frontend/src/services/apiClient.ts` | file | 공통 JSON API client | Service/API boundary | JSON request, Authorization header, error body 정규화, DELETE 204 응답 처리를 담당한다. |
 | `kpsc-oj-frontend/src/services/problemService.ts` | file | 문제 API service | Service/API boundary | 문제 목록/상세/정의 조회와 문제 생성/수정 API 호출을 담당한다. |
 | `kpsc-oj-frontend/src/services/submissionService.ts` | file | 제출 API service | Service/API boundary | 제출 생성, 내 제출 목록 조회, 제출 상세 조회 API 호출을 담당한다. |
+| `kpsc-oj-frontend/src/services/contestService.ts` | file | Contest API service | Service/API boundary | Contest 목록/상세/참가, ContestProblem 관리, 대회 제출, 스코어보드 API 호출을 담당한다. |
 | `kpsc-oj-frontend/src/components/layout/ThemeModeToggle.tsx` | file | 라이트/다크 모드 전환 버튼 | Shared layout UI | Header에서 전역 theme mode store를 호출해 색상 모드를 전환한다. |
 | `kpsc-oj-frontend/src/stores` | directory | 전역 UI/application state | Store | AuthProvider, auth context, useAuth hook, ThemeProvider, theme context, useTheme hook, session role 정규화, access token 갱신 흐름을 포함한다. |
 | `kpsc-oj-frontend/src/stores/themeContext.ts` | file | 테마 context 계약 | Store contract | theme mode context value와 `ThemeMode` 타입을 정의한다. |
@@ -51,4 +65,6 @@
 | `kpsc-oj-frontend/src/types` | directory | API DTO와 UI-facing 타입 정의 | Type contract | API DTO와 화면 모델을 분리한다. |
 | `kpsc-oj-frontend/src/types/problemApi.ts` | file | 문제 API DTO 타입 | API DTO contract | 문제 목록/상세/정의/생성/수정 request/response DTO, 목록 생성자 식별 필드, optional checker field, 서브테스크 및 선행 관계 DTO를 정의한다. |
 | `kpsc-oj-frontend/src/types/submissionApi.ts` | file | 제출 API DTO 타입 | API DTO contract | 제출 생성/목록/상세 request/response DTO와 서브테스크 결과 DTO를 정의한다. |
+| `kpsc-oj-frontend/src/types/contestApi.ts` | file | Contest API DTO 타입 | API DTO contract | Contest, ContestProblem, ContestSubmission, Scoreboard request/response DTO와 enum 타입을 정의한다. |
+| `kpsc-oj-frontend/src/types/contest.ts` | file | Contest 화면 모델 타입 | UI view model contract | Contest API DTO에서 변환된 대회 목록/상세/문제/폼/제출/스코어보드 화면 모델을 정의한다. |
 | `kpsc-oj-frontend/src/assets` | directory | 정적 asset | Static asset | 현재 MVP 라우팅에서는 직접 사용하지 않는다. |

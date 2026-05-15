@@ -7,11 +7,11 @@
 - 전역 레이아웃 단위: `components/layout`은 모든 layout에서 공유하는 SiteHeader, SiteFooter, ThemeModeToggle을 담당한다.
 - 인증 단위: `components/auth`는 Google Identity Services 버튼처럼 인증 UI 표시와 SDK script 경계를 담당한다.
 - 라우트 보호 단위: `components/auth/ProtectedRoute.tsx`는 인증 세션과 필요한 role이 있는 화면의 진입 경계를 담당한다.
-- 기능 전용 단위: `components/problem`, `components/submission`은 문제/제출 표시 책임만 가진다. 문제 정의 입력과 서브테스크 입력처럼 생성/수정 화면이 공유하는 폼 UI도 problem 기능 컴포넌트가 소유한다.
+- 기능 전용 단위: `components/problem`, `components/submission`, `components/contest`는 문제/제출/대회 표시 책임만 가진다. 문제 정의 입력과 서브테스크 입력처럼 생성/수정 화면이 공유하는 폼 UI도 해당 기능 컴포넌트가 소유한다.
 - Layout 단위: `layouts`는 라우트별 화면 구조와 내비게이션을 담당한다.
 - Page 단위: `pages`는 라우트 파라미터 처리, hook 호출, 컴포넌트 조립을 담당한다.
 - Hook 단위: `hooks`는 page에서 필요한 비동기 유스케이스와 service 호출을 캡슐화한다.
-- Service/Application 단위: `src/services/authService.ts`는 백엔드 인증 DTO를 `AuthLoginResult` 또는 `AuthSession`으로 변환하고 token refresh API를 호출한다. `src/services/problemService.ts`와 `src/services/submissionService.ts`는 문제/제출 API 호출을 담당한다.
+- Service/Application 단위: `src/services/authService.ts`는 백엔드 인증 DTO를 `AuthLoginResult` 또는 `AuthSession`으로 변환하고 token refresh API를 호출한다. `src/services/problemService.ts`, `src/services/submissionService.ts`, `src/services/contestService.ts`는 문제/제출/Contest API 호출을 담당한다.
 - Repository/Adapter 단위: 현재 없음. 외부 API 계약 확정 후 adapter/client 경계를 추가한다.
 
 ## 계약 규칙
@@ -39,6 +39,11 @@
 | `ProblemDefinitionForm` | problem | initial problem definition, submit callback | 문제 생성/수정 공용 입력 폼, 일반/서브테스크 테스트 케이스와 서브테스크 선행 관계 입력, client-side validation |
 | `ProblemSubmissionHistory` | submission | submission page state, pagination callback | 제출 작업 화면에서 현재 문제로 필터링된 내 제출 기록 표시 |
 | `SubmissionStatusBadge` | submission | `SubmissionStatus` | 제출 상태 색상 매핑 |
+| `ContestStatusBadge`, `ContestProblemStatusBadge`, `ContestVisibilityBadge` | contest | Contest status/visibility/solvedStatus | 대회 상태, 공개 범위, 대회 문제 풀이 상태 배지 표시 |
+| `ContestNavigation` | contest | contestId, isStaff | 대회 전용 Home/Problems/Submissions/Scoreboard/Manage 내비게이션 표시 |
+| `ContestProblemForm` | contest | initial contest problem form value, submit callback | ContestProblem 생성/수정 공용 입력 폼, EXAMPLE/HIDDEN testcase 입력과 client-side validation |
+| `ContestSubmissionTable` | contest | contest submissions, showSubmitter | 내 대회 제출 또는 운영진 전체 제출 목록 표시 |
+| `ContestScoreboardTable` | contest | ContestScoreboard | ICPC 스타일 rank/user/solved/penalty/problem cell 테이블 표시 |
 
 ## React 메모
 - 컴포넌트 안에서 fetch/axios 호출을 직접 수행하지 않는다.
@@ -61,5 +66,10 @@
 - 문제 생성/수정 폼은 서브테스크 사용 체크박스를 제공한다. 체크하지 않으면 `actualTestCaseInputs`/`actualTestCaseOutputs`를 전송하고, 체크하면 일반 실제 테스트 케이스 배열을 비운 뒤 `subtasks[].testCases`와 `subtasks[].prerequisiteSubtaskOrders`를 전송한다.
 - `ProblemDefinitionForm`은 서브테스크 선행 관계 입력을 쉼표 구분 order 문자열로 받고, 요청 DTO 변환 전에 양의 정수, 중복, 자기 참조, 존재하지 않는 order, 순환 관계를 검증한다.
 - 제출 조회/생성/상세 API 호출은 `Page -> submission hook -> auth store token refresh -> submissionService -> Backend API` 흐름을 따른다.
+- Contest 조회/참가/문제/제출/스코어보드 API 호출은 `Page -> contest hook -> auth store token refresh(optional) -> contestService -> Backend API` 흐름을 따른다. public GET API는 비로그인 호출을 허용하고, 로그인 세션이 있으면 Authorization header를 붙여 권한 정보를 받는다.
+- ContestProblem은 일반 `Problem`과 다른 타입으로 취급한다. API DTO는 `contestApi.ts`, 화면 모델은 `contest.ts`에 분리한다.
+- Contest 운영진 UI는 `GET /api/v1/contests/{contestId}` 응답의 `isStaff` 값으로만 노출하고, 백엔드 403/`CONTEST_STAFF_REQUIRED`가 최종 권한 경계다.
+- Contest 문제 상세는 API 계약상 EXAMPLE testcase만 표시하고 HIDDEN testcase를 표시하지 않는다. 생성/수정 폼의 `testCases` 입력은 ContestProblem mutation request DTO로만 전송한다.
+- Contest 제출 생성 후 상세 endpoint가 없으므로 `useContestSubmissions`가 대회 제출 목록을 polling해 생성된 제출 상태 변화를 반영한다.
 - 제출 작업 화면의 `내 제출` 탭은 `SubmitPage`가 보유한 탭/page/refresh 상태를 `ProblemSubmissionHistory`에 props로 전달하고, 컴포넌트는 API 호출 없이 목록 표시와 pagination 버튼만 담당한다.
 - 제출 생성 후 상세 결과는 `useSubmissionDetail`이 `SubmissionDetail` view model로 변환하며, 채점 진행 중 상태에서는 polling한다. 서브테스크 결과가 있으면 `SubmitPage`가 `subtaskResults`의 상태와 점수를 표시한다.

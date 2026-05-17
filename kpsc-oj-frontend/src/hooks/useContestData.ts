@@ -47,6 +47,26 @@ type ContestSubmissionScope = 'all' | 'mine'
 const contestSubmissionPollingIntervalMillis = 2500
 const pendingContestSubmissionStatuses = new Set(['QUEUED', 'RUNNING', 'JUDGING', 'PENDING'])
 
+function padDateTimePart(value: number): string {
+  return value.toString().padStart(2, '0')
+}
+
+function formatContestDateTime(dateTime: string): string {
+  const parsedDateTime = new Date(dateTime)
+
+  if (Number.isNaN(parsedDateTime.getTime())) {
+    return dateTime
+  }
+
+  const year = parsedDateTime.getFullYear()
+  const month = padDateTimePart(parsedDateTime.getMonth() + 1)
+  const date = padDateTimePart(parsedDateTime.getDate())
+  const hours = padDateTimePart(parsedDateTime.getHours())
+  const minutes = padDateTimePart(parsedDateTime.getMinutes())
+
+  return `${year}-${month}-${date}-${hours}-${minutes}`
+}
+
 function createMissingSessionError(): AuthApiError {
   return {
     code: 'AUTHENTICATION_FAILED',
@@ -70,9 +90,9 @@ async function requestMaybeWithFreshSession<TResult>(
 function mapContestListItem(responseDto: ContestListItemResponseDto): ContestListItem {
   return {
     description: responseDto.description,
-    endTime: responseDto.endTime,
+    endTime: formatContestDateTime(responseDto.endTime),
     id: responseDto.id,
-    startTime: responseDto.startTime,
+    startTime: formatContestDateTime(responseDto.startTime),
     status: responseDto.status,
     title: responseDto.title,
     visibility: responseDto.visibility,
@@ -134,7 +154,7 @@ function mapContestSubmission(
     problemLabel: responseDto.problemLabel,
     scorePercentage: responseDto.scorePercentage ?? null,
     status: responseDto.status,
-    submittedAt: responseDto.submittedAt,
+    submittedAt: formatContestDateTime(responseDto.submittedAt),
     submitterServiceUsername: responseDto.submitterServiceUsername,
   }
 }
@@ -149,7 +169,7 @@ function mapContestCreatedSubmission(
     language: responseDto.language,
     problemLabel: responseDto.problemLabel,
     status: responseDto.status,
-    submittedAt: responseDto.submittedAt,
+    submittedAt: formatContestDateTime(responseDto.submittedAt),
   }
 }
 
@@ -166,7 +186,9 @@ function mapContestScoreboard(responseDto: ContestScoreboardResponseDto): Contes
         problemLabel: cellDto.problemLabel,
         solved: cellDto.solved,
       })),
-      lastAcceptedAt: rowDto.lastAcceptedAt ?? null,
+      lastAcceptedAt: rowDto.lastAcceptedAt
+        ? formatContestDateTime(rowDto.lastAcceptedAt)
+        : null,
       participantId: rowDto.participantId,
       penalty: rowDto.penalty,
       serviceUsername: rowDto.serviceUsername,

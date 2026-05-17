@@ -12,6 +12,7 @@
 | `kpsc-oj-frontend/src/layouts/PublicLayout.tsx` | file | 공개 홈 레이아웃 | Presentation layout | 공통 Header/Footer와 outlet을 조립한다. |
 | `kpsc-oj-frontend/src/layouts/AppLayout.tsx` | file | 앱 내부 레이아웃 | Presentation layout | 공통 Header/Footer, 사이드 내비게이션, outlet을 조립한다. |
 | `kpsc-oj-frontend/src/layouts/ContestLayout.tsx` | file | 대회별 화면 레이아웃 | Presentation layout | 대회 상세를 조회하고 대회 전용 네비게이션과 child route context를 제공한다. |
+| `kpsc-oj-frontend/src/layouts/ContestProblemWorkspaceLayout.tsx` | file | 대회 문제 제출 작업 레이아웃 | Presentation layout | 대회 상세를 조회하고 Footer 없이 대회 문제 제출 화면에 viewport 높이를 배정한다. |
 | `kpsc-oj-frontend/src/layouts/ProblemWorkspaceLayout.tsx` | file | 문제 제출 작업 레이아웃 | Presentation layout | 공통 Header와 제출 화면 outlet을 조립하며 Footer 없이 화면 높이를 editor에 배정한다. |
 | `kpsc-oj-frontend/src/pages` | directory | 라우팅 단위 화면 조립 | Page | hook 호출 후 컴포넌트에 props를 전달한다. |
 | `kpsc-oj-frontend/src/pages/HomePage.tsx` | file | 홈 대시보드 | Page | 공개 홈 화면을 조립한다. |
@@ -25,7 +26,7 @@
 | `kpsc-oj-frontend/src/pages/ContestsPage.tsx` | file | 대회 목록 | Page | Contest 목록 hook 상태를 예정/진행중/종료 그룹으로 표시한다. |
 | `kpsc-oj-frontend/src/pages/ContestHomePage.tsx` | file | 대회 홈 | Page | 대회 상세 context, 문제 요약, 참가 상태, 스코어보드 미리보기를 조립한다. |
 | `kpsc-oj-frontend/src/pages/ContestProblemsPage.tsx` | file | 대회 문제 목록 | Page | ContestProblem 목록과 운영진 문제 생성/수정/삭제 진입을 조립한다. |
-| `kpsc-oj-frontend/src/pages/ContestProblemDetailPage.tsx` | file | 대회 문제 상세/제출 | Page | ContestProblem 상세, 예제, Monaco 제출 폼, 내 대회 제출 목록을 조립한다. |
+| `kpsc-oj-frontend/src/pages/ContestProblemDetailPage.tsx` | file | 대회 문제 상세/제출 | Page | ContestProblem 상세와 예제, 내 제출 탭, 화면 높이를 크게 쓰는 Monaco 제출 workspace를 조립한다. |
 | `kpsc-oj-frontend/src/pages/ContestSubmissionsPage.tsx` | file | 대회 제출 목록 | Page | 내 대회 제출 목록과 운영진 전체 제출 목록 toggle을 조립한다. |
 | `kpsc-oj-frontend/src/pages/ContestScoreboardPage.tsx` | file | 대회 스코어보드 | Page | Contest scoreboard hook 상태를 ICPC 테이블로 표시한다. |
 | `kpsc-oj-frontend/src/pages/ContestProblemNewPage.tsx` | file | 대회 문제 생성 | Page | `isStaff` context를 확인하고 ContestProblem 생성 폼과 hook을 연결한다. |

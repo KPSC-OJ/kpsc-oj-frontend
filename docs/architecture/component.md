@@ -8,7 +8,7 @@
 - 인증 단위: `components/auth`는 Google Identity Services 버튼처럼 인증 UI 표시와 SDK script 경계를 담당한다.
 - 라우트 보호 단위: `components/auth/ProtectedRoute.tsx`는 인증 세션과 필요한 role이 있는 화면의 진입 경계를 담당한다.
 - 기능 전용 단위: `components/problem`, `components/submission`, `components/contest`는 문제/제출/대회 표시 책임만 가진다. 문제 정의 입력과 서브테스크 입력처럼 생성/수정 화면이 공유하는 폼 UI도 해당 기능 컴포넌트가 소유한다.
-- Layout 단위: `layouts`는 라우트별 화면 구조와 내비게이션을 담당한다.
+- Layout 단위: `layouts`는 라우트별 화면 구조와 내비게이션을 담당한다. 일반 제출 화면과 대회 문제 제출 화면은 workspace layout으로 분리해 Footer 없이 화면 높이를 editor에 배정한다.
 - Page 단위: `pages`는 라우트 파라미터 처리, hook 호출, 컴포넌트 조립을 담당한다.
 - Hook 단위: `hooks`는 page에서 필요한 비동기 유스케이스와 service 호출을 캡슐화한다.
 - Service/Application 단위: `src/services/authService.ts`는 백엔드 인증 DTO를 `AuthLoginResult` 또는 `AuthSession`으로 변환하고 token refresh API를 호출한다. `src/services/problemService.ts`, `src/services/submissionService.ts`, `src/services/contestService.ts`는 문제/제출/Contest API 호출을 담당한다.
@@ -50,7 +50,7 @@
 - 복잡한 상태 전이는 hook 또는 store action으로 분리한다.
 - API 타입과 UI view model의 변환 위치는 추후 service/data 경계에 둔다.
 - 라이트/다크 테마 상태는 `src/stores/themeStore.tsx`와 `src/stores/themeContext.ts`에서 관리하고, `ThemeModeToggle`과 `CodeEditor`는 `useTheme()`으로 표시 상태만 읽는다.
-- 인증 API 호출, session role 정규화, access token 갱신은 `src/services/authService.ts`와 `src/stores/authStore.tsx`를 통해서만 수행한다. role은 access token payload claim을 우선 확인하고, 없으면 token 응답 또는 저장된 session role을 사용한다.
+- 인증 API 호출, session role 정규화, access token 갱신은 `src/services/authService.ts`와 `src/stores/authStore.tsx`를 통해서만 수행한다. `AuthProvider`는 access token 만료 60초 전에 자동 refresh를 예약하고, role은 access token payload claim을 우선 확인하며 없으면 token 응답 또는 저장된 session role을 사용한다.
 - 보호 API를 호출하는 hook은 `requestWithFreshSession()`으로 유효한 access token을 받은 뒤 domain service를 호출한다.
 - Header, AppLayout, ProblemsPage는 auth store의 `isAdmin` 값으로 문제 생성 진입점을 숨긴다.
 - ProblemTable은 문제별 `canEdit` view model 값이 참인 행에만 수정 버튼을 표시한다.
@@ -68,8 +68,10 @@
 - 제출 조회/생성/상세 API 호출은 `Page -> submission hook -> auth store token refresh -> submissionService -> Backend API` 흐름을 따른다.
 - Contest 조회/참가/문제/제출/스코어보드 API 호출은 `Page -> contest hook -> auth store token refresh(optional) -> contestService -> Backend API` 흐름을 따른다. public GET API는 비로그인 호출을 허용하고, 로그인 세션이 있으면 Authorization header를 붙여 권한 정보를 받는다.
 - ContestProblem은 일반 `Problem`과 다른 타입으로 취급한다. API DTO는 `contestApi.ts`, 화면 모델은 `contest.ts`에 분리한다.
+- Contest API의 datetime 필드는 `useContestData`에서 화면 모델로 변환할 때 일반 사용자 표시용 `yyyy-MM-dd-hh-mm` 형식으로 정규화한다.
 - Contest 운영진 UI는 `GET /api/v1/contests/{contestId}` 응답의 `isStaff` 값으로만 노출하고, 백엔드 403/`CONTEST_STAFF_REQUIRED`가 최종 권한 경계다.
 - Contest 문제 상세는 API 계약상 EXAMPLE testcase만 표시하고 HIDDEN testcase를 표시하지 않는다. 생성/수정 폼의 `testCases` 입력은 ContestProblem mutation request DTO로만 전송한다.
+- 대회 문제 상세/제출 route는 `ContestProblemWorkspaceLayout`을 사용해 AppLayout의 sidebar, max-width, Footer 제약을 받지 않는다. `ContestProblemDetailPage`는 좌측 문제 설명/내 제출 탭과 우측 Monaco editor 및 제출 결과 패널을 조립하고, 실제 API 호출은 contest hook과 service 경계를 통해 수행한다.
 - Contest 제출 생성 후 상세 endpoint가 없으므로 `useContestSubmissions`가 대회 제출 목록을 polling해 생성된 제출 상태 변화를 반영한다.
 - 제출 작업 화면의 `내 제출` 탭은 `SubmitPage`가 보유한 탭/page/refresh 상태를 `ProblemSubmissionHistory`에 props로 전달하고, 컴포넌트는 API 호출 없이 목록 표시와 pagination 버튼만 담당한다.
 - 제출 생성 후 상세 결과는 `useSubmissionDetail`이 `SubmissionDetail` view model로 변환하며, 채점 진행 중 상태에서는 polling한다. 서브테스크 결과가 있으면 `SubmitPage`가 `subtaskResults`의 상태와 점수를 표시한다.

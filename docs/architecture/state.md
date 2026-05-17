@@ -17,16 +17,17 @@
 | Problem definition form state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 request DTO로 변환되는 제목, 태그, 제한, Markdown 본문, 커스텀 checker 사용 여부와 optional checker code, 예제/일반 실제 테스트 케이스, 서브테스크 사용 여부, 서브테스크별 테스트 케이스와 선행 order 입력값 |
 | Problem mutation result state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 성공 응답과 오류 메시지 표시 상태 |
 | Code editor UI state | `SubmitPage` | React state | No | Monaco Editor의 선택 언어와 현재 소스 코드. 제출 소스 코드는 최대 10000자까지 허용한다. |
-| Contest list state | `useContestList` | Backend API | No | `GET /api/v1/contests` 응답에서 변환한 대회 목록과 status group 표시 상태 |
-| Contest detail state | `useContest` | Backend API | No | `GET /api/v1/contests/{contestId}` 응답에서 변환한 대회 상세, `isStaff`, `isParticipant` 상태 |
+| Contest list state | `useContestList` | Backend API | No | `GET /api/v1/contests` 응답에서 변환한 대회 목록과 status group 표시 상태. `startTime`/`endTime`은 `yyyy-MM-dd-hh-mm` 표시 문자열로 정규화한다. |
+| Contest detail state | `useContest` | Backend API | No | `GET /api/v1/contests/{contestId}` 응답에서 변환한 대회 상세, `isStaff`, `isParticipant` 상태. `startTime`/`endTime`은 `yyyy-MM-dd-hh-mm` 표시 문자열로 정규화한다. |
 | Contest problem list state | `useContestProblems` | Backend API | No | `GET /api/v1/contests/{contestId}/problems` 응답에서 변환한 ContestProblem 목록과 solvedStatus |
 | Contest problem detail state | `useContestProblem` | Backend API | No | `GET /api/v1/contests/{contestId}/problems/{contestProblemId}` 응답에서 변환한 ContestProblem 상세와 EXAMPLE testcase |
+| Contest problem workspace UI state | `ContestProblemDetailPage` | React state | No | 대회 문제 제출 화면 좌측 패널의 `문제 설명`/`내 제출` 탭, 선택 언어, 소스 코드, 제출 오류, 생성된 대회 제출 상태 |
 | Contest problem form state | `ContestProblemForm` | React state | No | ContestProblem mutation request DTO로 변환되는 label, title, statement, input/output description, constraints, limits, score, displayOrder, EXAMPLE/HIDDEN testcase 입력값 |
-| Contest submission list state | `useContestSubmissions` | Backend API | No | 내 대회 제출 또는 운영진 전체 제출 목록. 채점 중 제출이 있으면 2.5초 간격으로 목록을 polling한다. |
+| Contest submission list state | `useContestSubmissions` | Backend API | No | 내 대회 제출 또는 운영진 전체 제출 목록. `submittedAt`은 `yyyy-MM-dd-hh-mm` 표시 문자열로 정규화하고, 채점 중 제출이 있으면 2.5초 간격으로 목록을 polling한다. |
 | Contest created submission state | `ContestProblemDetailPage` | React state | No | 대회 문제 제출 성공 응답 표시 상태 |
 | Contest scoreboard state | `useContestScoreboard` | Backend API | No | `GET /api/v1/contests/{contestId}/scoreboard` 응답에서 변환한 문제 header와 row/cell 상태 |
 | Theme mode state | `ThemeProvider` | React state + localStorage | Yes | 라이트/다크 모드 선택값. `kpsc_oj_theme_mode` localStorage key와 document `data-theme` 속성으로 반영한다. |
-| Auth session state | `AuthProvider` | React state + localStorage | Yes | access token, refresh token, token type, 만료 시각, service username, role |
+| Auth session state | `AuthProvider` | React state + localStorage | Yes | access token, refresh token, token type, 만료 시각, service username, role, access token 만료 전 자동 refresh 예약 |
 | Pending signup state | `AuthProvider` | React state | No | `requiresSignup=true` 로그인 응답에서 생성되는 signup token과 검증된 Google email |
 
 ## Enum 값
@@ -73,22 +74,23 @@
 | --- | --- | --- | --- | --- |
 | none | `QUEUED` | 사용자가 `POST /api/v1/submissions`로 제출 생성 | Backend service | 생성된 제출 ID와 제출 시각을 화면에 표시한다. |
 | `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` | terminal status | 백엔드 비동기 채점 완료 후 상세 조회 | Backend processor | `useSubmissionDetail`이 2.5초 간격으로 상세 조회를 반복해 결과를 갱신한다. 서브테스크 문제는 `totalScore`와 `subtaskResults`로 획득 점수를 표시한다. |
-| not participant | participant | 사용자가 `POST /api/v1/contests/{contestId}/join` 호출 | Backend contest service | `ContestLayout`이 대회 상세을 재조회해 `isParticipant=true`를 반영한다. |
+| not participant | participant | 사용자가 `POST /api/v1/contests/{contestId}/join` 호출 | Backend contest service | `ContestLayout` 또는 `ContestProblemWorkspaceLayout`이 대회 상세를 재조회해 `isParticipant=true`를 반영한다. |
 | none | `QUEUED` | 사용자가 `POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions`로 대회 제출 생성 | Backend service | 생성된 contest submission ID와 제출 시각을 표시하고 대회 제출 목록 polling을 시작한다. |
 | `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` | terminal status | 백엔드 비동기 채점 완료 후 대회 제출 목록 조회 | Backend processor | `useContestSubmissions`가 2.5초 간격으로 목록을 재조회해 상태를 갱신한다. |
 | `light` | `dark` | 사용자가 Header 테마 버튼 클릭 | ThemeProvider | localStorage와 document `data-theme`를 갱신하고 Monaco editor를 dark theme로 표시한다. |
 | `dark` | `light` | 사용자가 Header 테마 버튼 클릭 | ThemeProvider | localStorage와 document `data-theme`를 갱신하고 Monaco editor를 light theme로 표시한다. |
-| persisted auth session | refreshed auth session | access token 만료 60초 전 또는 보호 API 401 응답 | `POST /api/v1/auth/refresh` | 새 access token, refresh token, 만료 시각을 localStorage에 저장한다. |
+| persisted auth session | refreshed auth session | AuthProvider 자동 timer가 access token 만료 60초 전에 실행되거나 보호 API 401 응답 발생 | `POST /api/v1/auth/refresh` | 새 access token, refresh token, 만료 시각을 localStorage에 저장하고 다음 자동 refresh를 예약한다. |
 | persisted auth session | none | refresh token 검증 실패, 만료, 폐기된 session, rotation 불일치 | Backend auth API | localStorage auth session을 제거하고 로그인 화면으로 돌아갈 수 있게 한다. |
 
 ## 인증 상태
 - Auth session은 `kpsc_oj_auth_session` localStorage key에 저장한다.
 - 저장 필드: `accessToken`, `refreshToken`, `tokenType`, `expiresInSeconds`, `expiresAtEpochMs`, `serviceUsername`, `role`.
-- 저장된 session으로 앱을 시작했을 때 access token이 이미 refresh 기준 시각을 지났으면 `AuthProvider`가 `POST /api/v1/auth/refresh`를 한 번 시도한다.
-- access token 만료 60초 전부터 보호 API 호출은 `POST /api/v1/auth/refresh`로 새 access token과 refresh token을 먼저 발급받는다.
+- 저장된 session으로 앱을 시작했을 때 access token이 이미 refresh 기준 시각을 지났으면 `AuthProvider`가 `POST /api/v1/auth/refresh`를 즉시 시도한다.
+- `AuthProvider`는 로그인 세션이 있으면 access token 만료 60초 전에 자동 refresh timer를 예약해 사용자가 문제를 푸는 동안 보호 API 호출이 없어도 세션을 갱신한다.
+- access token 만료 60초 전부터 보호 API 호출도 `POST /api/v1/auth/refresh`로 새 access token과 refresh token을 먼저 발급받는다.
 - 보호 API가 401 또는 `AUTHENTICATION_FAILED`를 반환하면 refresh token으로 한 번 갱신한 뒤 원래 요청을 한 번 재시도한다.
-- 여러 보호 API 호출이 동시에 refresh를 필요로 하면 `AuthProvider`는 하나의 refresh 요청만 수행하고 그 결과를 공유한다.
-- refresh가 400/401 또는 `INVALID_REQUEST`/`AUTHENTICATION_FAILED`로 실패하면 저장된 session을 제거한다.
+- 여러 보호 API 호출이나 자동 refresh가 동시에 refresh를 필요로 하면 `AuthProvider`는 하나의 refresh 요청만 수행하고 그 결과를 공유한다.
+- refresh가 400/401 또는 `INVALID_REQUEST`/`AUTHENTICATION_FAILED`로 실패하면 저장된 session을 제거한다. 자동 refresh 중 네트워크 오류나 5xx가 발생하면 session을 보존하고 30초 후 다시 시도한다.
 - access token payload의 `role`, `roles`, `authority`, `authorities`, `scope` claim에서 `ADMIN` 권한을 우선 정규화한다. claim에 role이 없으면 인증 응답 또는 기존 localStorage session의 role을 사용하고, 그래도 없으면 `USER`로 정규화한다.
 - `ADMIN`이 아닌 session은 문제 생성 nav와 `/admin/problems/new` 화면을 볼 수 없다.
 - 문제 수정 진입은 role만으로 결정하지 않고 문제 목록의 `createdByServiceUsername`과 현재 session의 `serviceUsername`이 일치할 때만 표시한다. 직접 URL 접근과 저장 요청은 백엔드의 문제 생성자 검증으로 최종 차단한다.

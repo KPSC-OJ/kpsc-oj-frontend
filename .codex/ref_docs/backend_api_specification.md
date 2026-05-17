@@ -24,6 +24,11 @@
 - Refresh는 refresh token에 포함된 session id를 기준으로 active session을 확인하고, 저장된 `refresh_token_hash`와 요청 token hash가 일치할 때만 새 access/refresh token을 발급한다.
 - Refresh 성공 시 refresh token rotation을 수행하며 `auth_sessions.refresh_token_hash`와 `auth_sessions.expires_at`을 새 refresh token 기준으로 갱신한다. 이전 refresh token은 즉시 무효화된다.
 
+## 시간 계약
+- 대회, 제출, 스코어보드처럼 사용자에게 노출되는 시간 응답 필드는 ISO-8601 문자열이며 `Asia/Seoul` 기준 offset `+09:00`을 포함한다.
+- 관리자 대회 생성/수정 form에서 offset 없는 `yyyy-MM-ddTHH:mm[:ss]` 입력은 한국 시간으로 해석한다. `Z` 또는 명시적 offset이 있는 입력은 해당 offset을 기준으로 해석한다.
+- DB와 내부 상태 계산은 절대 시각으로 유지하고, API/관리자 화면 경계에서 한국 시간으로 변환한다.
+
 ## 엔드포인트
 
 ### GET /health
@@ -365,20 +370,20 @@
 - Request body:
   - `problemNumber`: number, required, 제출 대상 문제 번호. `1000`부터 생성 순서대로 증가하는 문제 번호.
   - `language`: string, required, 제출 언어. 허용 값은 `cpp17`, `python3`.
-  - `sourceCode`: string, required, 제출할 전체 소스 코드. 빈 문자열 불가.
+  - `sourceCode`: string, required, 제출할 전체 소스 코드. 빈 문자열 불가, 최대 10000자.
 - Response body:
   - `id`: string, required, 생성된 제출 UUID.
   - `problemNumber`: number, required, 제출 대상 문제 번호.
   - `language`: string, required, 저장된 제출 언어. 값은 `cpp17` 또는 `python3`.
   - `status`: string, required, 생성 직후 제출 상태. 값은 `QUEUED`.
-  - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각.
+  - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각. 한국 시간 offset `+09:00` 포함.
 - Status codes:
   - 201: 제출 생성 완료.
-  - 400: 요청 field 형식 오류 또는 지원하지 않는 언어.
+  - 400: 요청 field 형식 오류, 소스 코드 길이 초과, 또는 지원하지 않는 언어.
   - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
   - 404: 해당 문제 번호가 존재하지 않음.
 - Error cases:
-  - `INVALID_REQUEST`: field 누락, 형식 오류, 또는 빈 소스 코드.
+  - `INVALID_REQUEST`: field 누락, 형식 오류, 빈 소스 코드, 또는 `sourceCode`가 10000자를 초과함.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `PROBLEM_NOT_FOUND`: 제출 대상 문제 번호가 존재하지 않음.
   - `UNSUPPORTED_LANGUAGE`: `language`가 `cpp17`, `python3` 중 하나가 아님.
@@ -402,7 +407,7 @@
   - `submissions[].language`: string, required, 제출 언어. 값은 `cpp17` 또는 `python3`.
   - `submissions[].status`: string, required, 제출 상태 enum.
   - `submissions[].scorePercentage`: number, optional, 채점 점수 percentage. 채점 전이면 null.
-  - `submissions[].submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각.
+  - `submissions[].submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각. 한국 시간 offset `+09:00` 포함.
 - Status codes:
   - 200: 내 제출 목록 조회 성공.
   - 400: `page` 또는 `problemNumber` query parameter 형식 오류 또는 1 미만.
@@ -425,7 +430,7 @@
   - `status`: string, required, 제출 상태 enum.
   - `scorePercentage`: number, optional, 통과한 테스트 비율 percentage. 채점 전이면 null. 테스트 케이스 개수와 통과 개수는 노출하지 않는다.
   - `totalScore`: number, optional, 백엔드가 저장한 최종 점수. 일반 문제에서는 `scorePercentage`와 같은 값이고, 서브테스크 문제에서는 획득한 서브테스크 점수 합이다. 채점 전이면 null.
-  - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각.
+  - `submittedAt`: string, required, ISO-8601 형식의 제출 생성 시각. 한국 시간 offset `+09:00` 포함.
   - `sourceCode`: string, required, 제출한 전체 소스 코드. 제출자 본인 또는 관리자에게만 반환.
   - 테스트 케이스별 결과, 테스트 케이스 개수, 통과 개수, 실패 케이스 순서와 종류는 응답에 포함하지 않는다.
   - `compileErrorMessage`: string, optional, 컴파일 오류 메시지. `status=COMPILE_ERROR`일 때 사용하며 없으면 null.
@@ -449,7 +454,7 @@
   "status": "WRONG_ANSWER",
   "scorePercentage": 0.0,
   "totalScore": 0.0,
-  "submittedAt": "2026-05-14T00:00:00Z",
+  "submittedAt": "2026-05-14T09:00:00+09:00",
   "sourceCode": "#include <bits/stdc++.h>\nint main() { return 0; }\n",
   "compileErrorMessage": null,
   "runtimeErrorMessage": null,
@@ -490,6 +495,105 @@
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `FORBIDDEN_OPERATION`: 제출 상세 조회 권한이 없음.
   - `SUBMISSION_NOT_FOUND`: 해당 제출이 존재하지 않음.
+
+### GET /admin/login
+- Contest API 상세 계약은 프론트 전달용 [docs/contest-api.md](../contest-api.md)를 기준으로 한다. 아래 항목은 `docs/api/endpoints.md`와 동일한 공개 endpoint set을 유지하기 위한 요약 명세다.
+
+### GET /api/v1/contests
+- 설명: 조회 가능한 대회 목록을 반환한다. Authorization header가 있으면 PRIVATE 대회 표시 권한 판단에 사용한다.
+- 인증: public.
+- Request body: 없음.
+- Response body: array of object.
+  - `id`: string UUID, required.
+  - `title`: string, required.
+  - `description`: string, required.
+  - `startTime`: string datetime, required, ISO-8601 한국 시간 offset `+09:00` 포함.
+  - `endTime`: string datetime, required, ISO-8601 한국 시간 offset `+09:00` 포함.
+  - `status`: string, required, `DRAFT`, `SCHEDULED`, `RUNNING`, `ENDED`.
+  - `visibility`: string, required, `PUBLIC`, `PRIVATE`.
+- Status codes: 200.
+
+### GET /api/v1/contests/{contestId}
+- 설명: 대회 상세와 현재 사용자 기준 `isStaff`, `isParticipant` 권한 정보를 반환한다.
+- 인증: public.
+- Path params: `contestId` string UUID.
+- Response body: `id`, `title`, `description`, `startTime`, `endTime`, `visibility`, `registrationMode`, `status`, `isStaff`, `isParticipant`.
+- Status codes: 200, 403, 404.
+- Error cases: `CONTEST_NOT_FOUND`, `CONTEST_FORBIDDEN`.
+
+### GET /api/v1/contests/{contestId}/problems
+- 설명: 대회 문제 목록과 현재 사용자 풀이 상태를 반환한다.
+- 인증: public.
+- Response body: array of `{id,label,title,score,displayOrder,solvedStatus}`.
+- `solvedStatus`: `NOT_SUBMITTED`, `ATTEMPTED`, `SOLVED`.
+- Status codes: 200, 403, 404.
+
+### GET /api/v1/contests/{contestId}/problems/{contestProblemId}
+- 설명: 대회 문제 상세를 반환한다. HIDDEN testcase는 반환하지 않는다.
+- 인증: public.
+- Response body: `id`, `label`, `title`, `statement`, `inputDescription`, `outputDescription`, `constraints`, `timeLimitMillis`, `memoryLimitKb`, `score`, `displayOrder`, `exampleTestCases`.
+- `exampleTestCases[]`: `{caseOrder,input,output}`.
+- Status codes: 200, 403, 404.
+
+### POST /api/v1/contests/{contestId}/join
+- 설명: OPEN 대회 참가를 처리한다. 이미 참가한 경우도 성공이다.
+- 인증: authenticated.
+- Request body: 없음.
+- Response body: `contestId`, `joined`.
+- Status codes: 200, 401, 403, 404.
+- Error cases: `CONTEST_FORBIDDEN`, `CONTEST_NOT_FOUND`.
+
+### POST /api/v1/contests/{contestId}/problems
+- 설명: ContestStaff 또는 ADMIN이 대회 문제와 테스트 케이스를 생성한다.
+- 인증: authenticated, ContestStaff 또는 ADMIN.
+- Request body: `label`, `title`, `statement`, `inputDescription`, `outputDescription`, `constraints`, `timeLimitMillis`, `memoryLimitKb`, `score`, `displayOrder`, `testCases`.
+- `testCases[]`: `{caseOrder,kind,inputText,outputText}`, `kind`는 `EXAMPLE` 또는 `HIDDEN`, 최소 1개 HIDDEN 필요.
+- Response body: `id`, `contestId`, `label`, `title`, `score`, `displayOrder`, `exampleTestCaseCount`, `hiddenTestCaseCount`.
+- Status codes: 201, 400, 401, 403, 404.
+- Error cases: `VALIDATION_ERROR`, `CONTEST_STAFF_REQUIRED`, `CONTEST_NOT_FOUND`.
+
+### PATCH /api/v1/contests/{contestId}/problems/{contestProblemId}
+- 설명: ContestStaff 또는 ADMIN이 대회 문제 기본 정보와 테스트 케이스 set을 교체한다.
+- 인증: authenticated, ContestStaff 또는 ADMIN.
+- Request/Response body: `POST /api/v1/contests/{contestId}/problems`와 동일.
+- Status codes: 200, 400, 401, 403, 404.
+- Error cases: `VALIDATION_ERROR`, `CONTEST_STAFF_REQUIRED`, `CONTEST_PROBLEM_NOT_FOUND`.
+
+### DELETE /api/v1/contests/{contestId}/problems/{contestProblemId}
+- 설명: ContestStaff 또는 ADMIN이 대회 문제를 실제 삭제한다.
+- 인증: authenticated, ContestStaff 또는 ADMIN.
+- Response body: 없음.
+- Status codes: 204, 401, 403, 404.
+
+### POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions
+- 설명: 대회 문제 제출을 `QUEUED` 상태로 생성하고 기존 judge queue가 처리하게 한다.
+- 인증: authenticated.
+- Request body:
+  - `language`: string, required, `cpp17` 또는 `python3`.
+  - `sourceCode`: string, required, 빈 문자열 불가, 최대 10000자.
+- Response body: `id`, `contestId`, `contestProblemId`, `problemLabel`, `language`, `status`, `submittedAt`. `submittedAt`은 한국 시간 offset `+09:00` 포함.
+- Status codes: 201, 400, 401, 403, 404.
+- Error cases: `CONTEST_NOT_RUNNING`, `CONTEST_NOT_JOINED`, `CONTEST_PROBLEM_NOT_FOUND`, `VALIDATION_ERROR`, `UNSUPPORTED_LANGUAGE`.
+
+### GET /api/v1/contests/{contestId}/submissions/me
+- 설명: 인증 사용자의 해당 대회 제출 목록을 최신순으로 반환한다.
+- 인증: authenticated.
+- Response body: array of `{id,contestProblemId,problemLabel,submitterServiceUsername,language,status,scorePercentage,submittedAt}`. `submittedAt`은 한국 시간 offset `+09:00` 포함.
+
+### GET /api/v1/contests/{contestId}/submissions
+- 설명: ContestStaff 또는 ADMIN이 해당 대회 전체 제출 목록을 최신순으로 반환한다.
+- 인증: authenticated, ContestStaff 또는 ADMIN.
+- Response body: `submissions/me`와 동일한 array.
+- Error cases: `CONTEST_STAFF_REQUIRED`.
+
+### GET /api/v1/contests/{contestId}/scoreboard
+- 설명: ICPC 스타일 스코어보드를 반환한다.
+- 인증: public.
+- Response body: `contestId`, `problems`, `rows`.
+- `rows[]`: `{participantId,serviceUsername,solvedCount,penalty,lastAcceptedAt,cells}`. `lastAcceptedAt`은 값이 있으면 한국 시간 offset `+09:00` 포함.
+- `cells[]`: `{contestProblemId,problemLabel,attempts,solved,penalty,firstSolved}`.
+- 정렬: `solvedCount desc`, `penalty asc`, `lastAcceptedAt asc`.
+- penalty: 첫 AC 제출 시간과 contest start 차이 분 + 첫 AC 전 오답 수 * 20분.
 
 ### GET /admin/login
 - 설명: Thymeleaf 기반 관리자 로그인 화면을 반환한다.

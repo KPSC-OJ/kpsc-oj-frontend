@@ -10,7 +10,7 @@
 - Access token TTL: 15분.
 - Refresh token TTL: 14일.
 - Signup token TTL: 10분.
-- Access token 만료 60초 전부터 프론트엔드는 `POST /api/v1/auth/refresh`로 access token과 refresh token을 갱신한다.
+- Access token 만료 60초 전부터 프론트엔드는 `AuthProvider` 자동 timer 또는 보호 API 호출 전 `POST /api/v1/auth/refresh`로 access token과 refresh token을 갱신한다.
 - 보호 API가 401 또는 `AUTHENTICATION_FAILED`를 반환하면 프론트엔드는 refresh token으로 한 번 갱신한 뒤 원래 요청을 한 번 재시도한다.
 - Refresh는 refresh token rotation을 사용하므로 성공 응답의 새 refresh token을 즉시 localStorage session에 저장한다.
 - Auth role 값은 `USER`, `ADMIN`이다. 프론트엔드는 화면 표시용으로 token 응답의 optional role 또는 access token payload의 `role`, `roles`, `authority`, `authorities`, `scope` claim에서 `ADMIN` 권한을 정규화한다. 확인 가능한 `ADMIN` 권한이 없으면 `USER`로 처리한다.
@@ -738,6 +738,6 @@
 - 제출 상세 화면은 `totalScore`가 있으면 점수로 표시하고, 없으면 `scorePercentage`를 표시한다. `subtaskResults`가 있으면 서브테스크별 획득 점수와 상태를 표시한다.
 - `POST /api/v1/auth/google` 응답의 `requiresSignup=false`는 `AuthSession`, `requiresSignup=true`는 pending signup state로 정규화한다.
 - `POST /api/v1/auth/signup` 응답 token set은 즉시 `AuthSession`으로 변환하며, 이 시점에 로그인 완료 상태가 된다.
-- `POST /api/v1/auth/refresh` 응답 token set은 즉시 기존 `AuthSession`을 대체하며, 동시 보호 API 요청은 하나의 refresh 요청 결과를 공유한다.
+- `POST /api/v1/auth/refresh` 응답 token set은 즉시 기존 `AuthSession`을 대체하며, 자동 refresh와 동시 보호 API 요청은 하나의 refresh 요청 결과를 공유한다.
 - Google Identity Services 버튼은 `VITE_GOOGLE_CLIENT_ID`가 있을 때 `https://accounts.google.com/gsi/client`를 로드하고 credential callback의 ID token을 `POST /api/v1/auth/google`로 전달한다.
 - Google SDK load 실패, client id 미설정, backend error는 LoginPage에서 사용자 오류 상태로 표시한다.

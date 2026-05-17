@@ -28,6 +28,7 @@ type AuthProviderProps = {
 
 const authStorageKey = 'kpsc_oj_auth_session'
 const accessTokenRefreshSkewMillis = 60_000
+const accessTokenRefreshRetryMillis = 30_000
 const serviceUsernamePattern = /^[A-Za-z0-9_]{3,32}$/
 
 function createAuthActionError(
@@ -40,6 +41,10 @@ function createAuthActionError(
     message,
     status,
   }
+}
+
+function createChangedSessionError(): AuthApiError {
+  return createAuthActionError('AUTH_SESSION_CHANGED', '인증 세션이 변경되었습니다.', 409)
 }
 
 function normalizeGoogleIdToken(idToken: string): string {
@@ -227,6 +232,12 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
       if (!refreshPromiseRef.current) {
         refreshPromiseRef.current = refreshAuthSession(currentSession.refreshToken)
           .then((nextSession) => {
+            const activeSession = sessionRef.current
+
+            if (!activeSession || activeSession.refreshToken !== currentSession.refreshToken) {
+              throw createChangedSessionError()
+            }
+
             applySession(nextSession)
 
             return nextSession
@@ -288,12 +299,35 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   useEffect(() => {
     const currentSession = sessionRef.current
 
-    if (!currentSession || isAccessTokenFresh(currentSession)) {
-      return
+    if (!currentSession) {
+      return undefined
     }
 
-    void refreshCurrentSession().catch(() => undefined)
-  }, [refreshCurrentSession])
+    let isActive = true
+    let refreshTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+    function scheduleRefresh(delayMillis: number): void {
+      refreshTimeoutId = setTimeout(() => {
+        void refreshCurrentSession().catch((error: unknown) => {
+          if (!isActive || shouldClearSessionAfterRefreshError(error) || !sessionRef.current) {
+            return
+          }
+
+          scheduleRefresh(accessTokenRefreshRetryMillis)
+        })
+      }, Math.max(delayMillis, 0))
+    }
+
+    scheduleRefresh(currentSession.expiresAtEpochMs - Date.now() - accessTokenRefreshSkewMillis)
+
+    return () => {
+      isActive = false
+
+      if (refreshTimeoutId) {
+        clearTimeout(refreshTimeoutId)
+      }
+    }
+  }, [refreshCurrentSession, session?.expiresAtEpochMs, session?.refreshToken])
 
   const signOut = useCallback(async (): Promise<void> => {
     const currentAccessToken = sessionRef.current?.accessToken

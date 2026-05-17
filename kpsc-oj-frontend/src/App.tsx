@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { AppLayout } from './layouts/AppLayout'
 import { ContestLayout } from './layouts/ContestLayout'
+import { ContestProblemWorkspaceLayout } from './layouts/ContestProblemWorkspaceLayout'
 import { ProblemWorkspaceLayout } from './layouts/ProblemWorkspaceLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { AdminProblemEditPage } from './pages/AdminProblemEditPage'
@@ -45,7 +46,6 @@ function App() {
               <Route path="contests/:contestId" element={<ContestLayout />}>
                 <Route index element={<ContestHomePage />} />
                 <Route path="problems" element={<ContestProblemsPage />} />
-                <Route path="problems/:contestProblemId" element={<ContestProblemDetailPage />} />
                 <Route path="submissions" element={<ContestSubmissionsPage />} />
                 <Route path="scoreboard" element={<ContestScoreboardPage />} />
                 <Route path="manage/problems/new" element={<ContestProblemNewPage />} />
@@ -101,6 +101,13 @@ function App() {
                     <AdminProblemEditPage />
                   </ProtectedRoute>
                 }
+              />
+            </Route>
+
+            <Route element={<ContestProblemWorkspaceLayout />}>
+              <Route
+                path="contests/:contestId/problems/:contestProblemId"
+                element={<ContestProblemDetailPage />}
               />
             </Route>
 

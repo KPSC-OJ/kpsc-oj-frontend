@@ -60,14 +60,14 @@
 
 ## 토큰 갱신
 - Actor: 로그인 사용자
-- Entry point: 모든 보호 API 호출 hook
+- Entry point: `AuthProvider` 자동 refresh timer, 모든 보호 API 호출 hook
 - Preconditions: localStorage 또는 auth store에 refresh token이 있는 인증 세션이 있어야 한다.
-- Steps: 앱 시작 시 저장된 session의 access token이 이미 refresh 기준 시각을 지났으면 `AuthProvider`가 `authService.refreshAuthSession()`으로 `POST /api/v1/auth/refresh`를 한 번 시도한다. 보호 API 호출 hook은 service를 직접 호출하기 전에 `requestWithFreshSession()`을 호출한다. auth store는 access token 만료까지 60초 미만이면 같은 refresh API를 요청한다. 성공하면 새 access token과 refresh token을 `AuthSession`으로 변환해 localStorage와 React state를 갱신한 뒤 원래 service 호출을 계속한다. 보호 API가 401 또는 `AUTHENTICATION_FAILED`를 반환하면 auth store가 refresh를 한 번 강제로 수행하고 원래 요청을 한 번 재시도한다.
+- Steps: `AuthProvider`는 로그인 세션이 있으면 access token 만료 60초 전에 `authService.refreshAuthSession()`으로 `POST /api/v1/auth/refresh`를 자동 예약한다. 앱 시작 시 저장된 session의 access token이 이미 refresh 기준 시각을 지났으면 즉시 같은 refresh API를 시도한다. refresh 성공 시 새 access token과 refresh token을 `AuthSession`으로 변환해 localStorage와 React state를 갱신하고, refresh token rotation으로 바뀐 다음 만료 시각에 맞춰 다음 자동 갱신을 다시 예약한다. 보호 API 호출 hook은 service를 직접 호출하기 전에 `requestWithFreshSession()`을 호출하고, access token 만료까지 60초 미만이면 같은 refresh API를 요청한다. 보호 API가 401 또는 `AUTHENTICATION_FAILED`를 반환하면 auth store가 refresh를 한 번 강제로 수행하고 원래 요청을 한 번 재시도한다.
 - Validation: refresh token 유효성, session active 여부, rotation 일치 여부는 백엔드가 최종 검증한다.
 - Empty state: 저장된 session이 없으면 로그인 필요 오류를 반환한다.
-- Error state: refresh가 400/401 또는 `INVALID_REQUEST`/`AUTHENTICATION_FAILED`로 실패하면 auth store가 local session을 제거한다. 네트워크 오류나 5xx는 session을 보존하고 호출자에게 오류를 전달한다.
+- Error state: refresh가 400/401 또는 `INVALID_REQUEST`/`AUTHENTICATION_FAILED`로 실패하면 auth store가 local session을 제거한다. 자동 refresh 중 네트워크 오류나 5xx가 발생하면 session을 보존하고 30초 후 다시 갱신을 시도한다. 보호 API 호출 중 같은 오류가 발생하면 session을 보존하고 호출자에게 오류를 전달한다.
 - Permission behavior: public with refresh token
-- Retry or recovery: 사용자는 다시 로그인할 수 있다. 동시 보호 API 호출은 하나의 refresh 요청 결과를 공유한다.
+- Retry or recovery: 사용자는 다시 로그인할 수 있다. 동시 보호 API 호출과 자동 refresh는 하나의 refresh 요청 결과를 공유한다.
 - Side effects: refresh 성공 시 기존 refresh token은 rotation으로 폐기되고 새 token set이 localStorage에 저장된다.
 - Related API: `POST /api/v1/auth/refresh`
 - Related DB tables: 백엔드 auth_sessions table
@@ -104,7 +104,7 @@
 - Actor: 일반 사용자, 대회 참가자, 운영진
 - Entry point: `/contests`, `/contests/:contestId`
 - Preconditions: public contest는 비로그인 조회 가능하다. PRIVATE contest는 백엔드 권한이 필요하다.
-- Steps: `ContestsPage`는 `useContestList()`로 `GET /api/v1/contests`를 호출하고 예정/진행중/종료 그룹으로 표시한다. `ContestLayout`은 `useContest(contestId)`로 `GET /api/v1/contests/{contestId}`를 호출해 대회 상세, `isStaff`, `isParticipant`를 child route context로 제공한다. 로그인 세션이 있으면 public GET에도 `requestWithFreshSession()`을 통해 Authorization header를 붙인다. `ContestHomePage`는 문제 요약과 스코어보드 미리보기를 함께 조회하고, 참가 버튼은 `useJoinContest()`로 `POST /api/v1/contests/{contestId}/join`을 호출한 뒤 대회 상세를 재조회한다.
+- Steps: `ContestsPage`는 `useContestList()`로 `GET /api/v1/contests`를 호출하고 예정/진행중/종료 그룹으로 표시한다. Contest hook은 API datetime을 화면 모델로 변환할 때 `yyyy-MM-dd-hh-mm` 형식으로 정규화한다. `ContestLayout`은 `useContest(contestId)`로 `GET /api/v1/contests/{contestId}`를 호출해 대회 상세, `isStaff`, `isParticipant`를 child route context로 제공한다. 로그인 세션이 있으면 public GET에도 `requestWithFreshSession()`을 통해 Authorization header를 붙인다. `ContestHomePage`는 문제 요약과 스코어보드 미리보기를 함께 조회하고, 참가 버튼은 `useJoinContest()`로 `POST /api/v1/contests/{contestId}/join`을 호출한 뒤 대회 상세를 재조회한다.
 - Validation: contestId 존재 여부와 PRIVATE 접근 권한은 백엔드가 최종 검증한다. 프론트는 `isStaff`와 `isParticipant`를 화면 노출 기준으로만 사용한다.
 - Empty state: 대회 목록, 문제 요약, 스코어보드 row가 없으면 빈 상태를 표시한다.
 - Error state: `CONTEST_NOT_FOUND`, `CONTEST_FORBIDDEN`, `AUTHENTICATION_FAILED`를 사용자 메시지로 표시한다.
@@ -118,7 +118,7 @@
 - Actor: 대회 참가자
 - Entry point: `/contests/:contestId/problems`, `/contests/:contestId/problems/:contestProblemId`
 - Preconditions: 대회 상세 조회가 가능해야 한다. 제출은 로그인 세션, `RUNNING` 상태, 참가 상태가 필요하다.
-- Steps: `ContestProblemsPage`는 `useContestProblems(contestId)`로 대회 문제 목록과 `solvedStatus`를 조회한다. `ContestProblemDetailPage`는 `useContestProblem(contestId, contestProblemId)`로 문제 본문, 입력/출력 설명, 제약, EXAMPLE testcase만 표시한다. 제출 폼은 기존 `CodeEditor`를 재사용하되 `useSubmitContestProblem()`으로 `POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions`를 호출한다. 제출 성공 후 `useContestSubmissions(contestId, 'mine', ..., true)`가 내 대회 제출 목록을 polling해 상태 변화를 표시한다.
+- Steps: `ContestProblemsPage`는 `useContestProblems(contestId)`로 대회 문제 목록과 `solvedStatus`를 조회한다. `/contests/:contestId/problems/:contestProblemId`는 `ContestProblemWorkspaceLayout`에서 대회 상세와 전용 내비게이션 context를 제공받아 AppLayout의 sidebar와 Footer 없이 화면 전체 높이를 사용한다. `ContestProblemDetailPage`는 `useContestProblem(contestId, contestProblemId)`로 문제 본문, 입력/출력 설명, 제약, EXAMPLE testcase만 표시하고 좌측 문제 설명/내 제출 탭과 우측 Monaco editor 제출 패널을 조립한다. 제출 폼은 기존 `CodeEditor`를 재사용하되 `useSubmitContestProblem()`으로 `POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions`를 호출한다. 제출 성공 후 `useContestSubmissions(contestId, 'mine', ..., true)`가 내 대회 제출 목록을 polling해 상태 변화를 표시한다.
 - Validation: 프론트는 sourceCode 공백과 10000자 초과를 확인한다. `language`, contest 상태, 참가 여부, 문제 존재 여부는 백엔드가 최종 검증한다.
 - Empty state: 문제 목록이나 해당 문제 제출 기록이 없으면 빈 상태를 표시한다.
 - Error state: `CONTEST_NOT_RUNNING`, `CONTEST_NOT_JOINED`, `CONTEST_PROBLEM_NOT_FOUND`, `UNSUPPORTED_LANGUAGE`, `VALIDATION_ERROR`를 사용자 메시지로 표시한다.

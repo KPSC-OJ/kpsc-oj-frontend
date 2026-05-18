@@ -1,6 +1,5 @@
 import { useState, type ReactElement } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Card } from '../components/common/Card'
 import { ContestProblemForm } from '../components/contest/ContestProblemForm'
 import { getContestErrorMessage } from '../hooks/contestErrorMessage'
 import { useContestProblemMutations } from '../hooks/useContestData'
@@ -35,7 +34,7 @@ export function ContestProblemNewPage(): ReactElement {
   return (
     <div className="grid gap-5">
       <div>
-        <p className="text-sm font-black text-blue-600">Manage</p>
+        <p className="text-sm font-black text-blue-600">관리</p>
         <h2 className="text-xl font-black text-slate-950">대회 문제 생성</h2>
       </div>
 
@@ -45,13 +44,12 @@ export function ContestProblemNewPage(): ReactElement {
         </div>
       ) : null}
 
-      <Card>
-        <ContestProblemForm
-          isSubmitting={isSubmitting}
-          onSubmit={createProblem}
-          submitLabel="문제 생성"
-        />
-      </Card>
+      <ContestProblemForm
+        isSubmitting={isSubmitting}
+        onSubmit={createProblem}
+        requiresReferenceSolution
+        submitLabel="문제 생성"
+      />
     </div>
   )
 }

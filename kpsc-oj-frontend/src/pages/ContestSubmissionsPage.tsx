@@ -21,7 +21,7 @@ export function ContestSubmissionsPage(): ReactElement {
     <div className="grid gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-black text-blue-600">Submissions</p>
+          <p className="text-sm font-black text-blue-600">대회 제출</p>
           <h2 className="text-xl font-black text-slate-950">대회 제출 목록</h2>
           {isPolling ? (
             <p className="mt-1 text-sm font-semibold text-slate-500">채점 상태를 갱신 중입니다.</p>

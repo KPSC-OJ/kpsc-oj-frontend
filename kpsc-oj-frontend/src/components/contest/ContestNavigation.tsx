@@ -4,26 +4,37 @@ import { NavLink } from 'react-router-dom'
 
 type ContestNavigationProps = {
   contestId: string
-  isStaff: boolean
+  includeManage?: boolean
+  isStaff?: boolean
+  variant?: 'header' | 'standalone'
 }
 
 const contestNavigationItems = [
-  { icon: Home, label: 'Home', path: '' },
-  { icon: ListChecks, label: 'Problems', path: 'problems' },
-  { icon: ClipboardList, label: 'Submissions', path: 'submissions' },
-  { icon: BarChart3, label: 'Scoreboard', path: 'scoreboard' },
+  { icon: Home, label: '홈', path: '' },
+  { icon: ListChecks, label: '문제', path: 'problems' },
+  { icon: ClipboardList, label: '제출', path: 'submissions' },
+  { icon: BarChart3, label: '스코어보드', path: 'scoreboard' },
 ]
 
 export function ContestNavigation({
   contestId,
-  isStaff,
+  includeManage = false,
+  isStaff = false,
+  variant = 'standalone',
 }: ContestNavigationProps): ReactElement {
-  const navigationItems = isStaff
-    ? [...contestNavigationItems, { icon: Settings, label: 'Manage', path: 'manage/problems/new' }]
+  const navigationItems = includeManage && isStaff
+    ? [...contestNavigationItems, { icon: Settings, label: '관리', path: 'manage/problems/new' }]
     : contestNavigationItems
+  const isHeaderNavigation = variant === 'header'
 
   return (
-    <nav className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white px-4">
+    <nav
+      className={
+        isHeaderNavigation
+          ? 'hidden items-center justify-center gap-6 text-sm font-semibold text-slate-600 md:flex'
+          : 'flex justify-center gap-2 overflow-x-auto border-b border-slate-200 bg-white px-4'
+      }
+    >
       {navigationItems.map((item) => {
         const Icon = item.icon
         const to = item.path ? `/contests/${contestId}/${item.path}` : `/contests/${contestId}`
@@ -31,18 +42,22 @@ export function ContestNavigation({
         return (
           <NavLink
             className={({ isActive }) =>
-              [
-                'inline-flex shrink-0 items-center gap-2 border-b-2 px-2 py-3 text-sm font-bold transition',
-                isActive
-                  ? 'border-blue-600 text-blue-700'
-                  : 'border-transparent text-slate-500 hover:text-slate-950',
-              ].join(' ')
+              isHeaderNavigation
+                ? isActive
+                  ? 'text-blue-700'
+                  : 'hover:text-blue-700'
+                : [
+                    'inline-flex shrink-0 items-center gap-2 border-b-2 px-2 py-3 text-sm font-bold transition',
+                    isActive
+                      ? 'border-blue-600 text-blue-700'
+                      : 'border-transparent text-slate-500 hover:text-slate-950',
+                  ].join(' ')
             }
             end={!item.path}
             key={item.path || 'home'}
             to={to}
           >
-            <Icon size={16} />
+            {isHeaderNavigation ? null : <Icon size={16} />}
             {item.label}
           </NavLink>
         )

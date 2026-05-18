@@ -7,18 +7,52 @@ import { ContestProblemForm } from '../components/contest/ContestProblemForm'
 import { getContestErrorMessage } from '../hooks/contestErrorMessage'
 import { useContestProblem, useContestProblemMutations } from '../hooks/useContestData'
 import { useContestLayoutContext } from '../layouts/contestLayoutContext'
-import type { ContestProblemDetail, ContestProblemFormValue } from '../types/contest'
+import type {
+  ContestProblemDetail,
+  ContestProblemFormSubtask,
+  ContestProblemFormValue,
+} from '../types/contest'
+
+function createDefaultFormSubtask(): ContestProblemFormSubtask {
+  return {
+    order: 1,
+    prerequisiteSubtaskOrdersText: '',
+    score: 100,
+    testCases: [{ inputText: '', outputText: '' }],
+    title: '',
+  }
+}
+
+function createInitialSubtasks(problem: ContestProblemDetail): ContestProblemFormSubtask[] {
+  if (problem.subtasks.length === 0) {
+    return [createDefaultFormSubtask()]
+  }
+
+  return problem.subtasks.map((subtask) => ({
+    order: subtask.order,
+    prerequisiteSubtaskOrdersText: subtask.prerequisiteSubtaskOrders.join(', '),
+    score: subtask.score,
+    testCases:
+      subtask.testCases.length > 0
+        ? subtask.testCases.map(() => ({ inputText: '', outputText: '' }))
+        : [{ inputText: '', outputText: '' }],
+    title: subtask.title,
+  }))
+}
 
 function createInitialFormValue(problem: ContestProblemDetail): ContestProblemFormValue {
   return {
+    checkerCode: '',
     constraints: problem.constraints,
     displayOrder: problem.displayOrder,
     inputDescription: problem.inputDescription,
     label: problem.label,
     memoryLimitKb: problem.memoryLimitKb,
     outputDescription: problem.outputDescription,
+    referenceSolutionCode: '',
     score: problem.score,
     statement: problem.statement,
+    subtasks: createInitialSubtasks(problem),
     testCases: [
       ...problem.exampleTestCases.map((testCase) => ({
         caseOrder: testCase.caseOrder,
@@ -35,6 +69,7 @@ function createInitialFormValue(problem: ContestProblemDetail): ContestProblemFo
     ],
     timeLimitMillis: problem.timeLimitMillis,
     title: problem.title,
+    usesSubtasks: problem.subtasks.length > 0,
   }
 }
 
@@ -124,7 +159,7 @@ export function ContestProblemEditPage(): ReactElement {
     <div className="grid gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-black text-blue-600">Manage</p>
+          <p className="text-sm font-black text-blue-600">관리</p>
           <h2 className="text-xl font-black text-slate-950">대회 문제 수정</h2>
         </div>
         <Button
@@ -144,16 +179,14 @@ export function ContestProblemEditPage(): ReactElement {
         </div>
       ) : null}
 
-      <Card>
-        <ContestProblemForm
-          initialValue={createInitialFormValue(problem)}
-          isSubmitting={isSubmitting}
-          key={problem.id}
-          notice="현재 상세 API는 HIDDEN testcase를 반환하지 않으므로 저장 시 testcase set을 입력값으로 교체합니다."
-          onSubmit={updateProblem}
-          submitLabel="수정 저장"
-        />
-      </Card>
+      <ContestProblemForm
+        initialValue={createInitialFormValue(problem)}
+        isSubmitting={isSubmitting}
+        key={problem.id}
+        notice="현재 상세 API는 HIDDEN testcase 본문과 checker code를 반환하지 않으므로 저장 시 입력값으로 testcase/subtask set과 checker 설정을 교체합니다."
+        onSubmit={updateProblem}
+        submitLabel="수정 저장"
+      />
     </div>
   )
 }

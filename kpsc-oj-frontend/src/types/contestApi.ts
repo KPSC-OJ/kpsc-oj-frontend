@@ -4,6 +4,8 @@ export type ContestVisibilityDto = 'PUBLIC' | 'PRIVATE'
 
 export type ContestRegistrationModeDto = 'OPEN' | 'STAFF_ONLY'
 
+export type ContestParticipationStatusDto = 'PENDING' | 'APPROVED'
+
 export type ContestStatusDto = 'DRAFT' | 'SCHEDULED' | 'RUNNING' | 'ENDED'
 
 export type ContestProblemSolvedStatusDto = 'NOT_SUBMITTED' | 'ATTEMPTED' | 'SOLVED'
@@ -29,6 +31,15 @@ export type ContestDetailResponseDto = ContestListItemResponseDto & {
 export type ContestJoinResponseDto = {
   contestId: string
   joined: boolean
+  participationStatus: ContestParticipationStatusDto
+}
+
+export type ContestPendingParticipantResponseDto = {
+  participantId: string
+  userAccountId: string
+  serviceUsername: string
+  status: ContestParticipationStatusDto
+  requestedAt: string
 }
 
 export type ContestProblemListItemResponseDto = {
@@ -46,6 +57,18 @@ export type ContestProblemExampleTestCaseResponseDto = {
   output: string
 }
 
+export type ContestProblemSubtaskTestCaseMetadataResponseDto = {
+  order: number
+}
+
+export type ContestProblemSubtaskResponseDto = {
+  order: number
+  title: string
+  score: number
+  prerequisiteSubtaskOrders: number[]
+  testCases: ContestProblemSubtaskTestCaseMetadataResponseDto[]
+}
+
 export type ContestProblemDetailResponseDto = {
   id: string
   label: string
@@ -59,6 +82,7 @@ export type ContestProblemDetailResponseDto = {
   score: number
   displayOrder: number
   exampleTestCases: ContestProblemExampleTestCaseResponseDto[]
+  subtasks?: ContestProblemSubtaskResponseDto[]
 }
 
 export type ContestProblemTestCaseRequestDto = {
@@ -68,7 +92,21 @@ export type ContestProblemTestCaseRequestDto = {
   outputText: string
 }
 
+export type ContestProblemSubtaskTestCaseRequestDto = {
+  input: string
+  output: string
+}
+
+export type ContestProblemSubtaskRequestDto = {
+  order: number
+  title: string
+  score: number
+  prerequisiteSubtaskOrders?: number[]
+  testCases: ContestProblemSubtaskTestCaseRequestDto[]
+}
+
 export type ContestProblemMutationRequestDto = {
+  checkerCode?: string | null
   label: string
   title: string
   statement: string
@@ -80,6 +118,8 @@ export type ContestProblemMutationRequestDto = {
   score: number
   displayOrder: number
   testCases: ContestProblemTestCaseRequestDto[]
+  referenceSolutionCode?: string
+  subtasks?: ContestProblemSubtaskRequestDto[]
 }
 
 export type ContestProblemMutationResponseDto = {

@@ -1,4 +1,5 @@
 import type {
+  ContestParticipationStatusDto,
   ContestProblemSolvedStatusDto,
   ContestProblemTestCaseKindDto,
   ContestRegistrationModeDto,
@@ -23,6 +24,20 @@ export type ContestDetail = ContestListItem & {
   registrationMode: ContestRegistrationModeDto
 }
 
+export type ContestJoinResult = {
+  contestId: string
+  joined: boolean
+  participationStatus: ContestParticipationStatusDto
+}
+
+export type ContestPendingParticipant = {
+  participantId: string
+  requestedAt: string
+  serviceUsername: string
+  status: ContestParticipationStatusDto
+  userAccountId: string
+}
+
 export type ContestProblemListItem = {
   displayOrder: number
   id: string
@@ -38,6 +53,18 @@ export type ContestProblemExampleTestCase = {
   output: string
 }
 
+export type ContestProblemSubtaskTestCaseMetadata = {
+  order: number
+}
+
+export type ContestProblemSubtask = {
+  order: number
+  prerequisiteSubtaskOrders: number[]
+  score: number
+  testCases: ContestProblemSubtaskTestCaseMetadata[]
+  title: string
+}
+
 export type ContestProblemDetail = {
   constraints: string
   displayOrder: number
@@ -49,6 +76,7 @@ export type ContestProblemDetail = {
   outputDescription: string
   score: number
   statement: string
+  subtasks: ContestProblemSubtask[]
   timeLimitMillis: number
   title: string
 }
@@ -60,18 +88,35 @@ export type ContestProblemFormTestCase = {
   outputText: string
 }
 
+export type ContestProblemFormSubtaskTestCase = {
+  inputText: string
+  outputText: string
+}
+
+export type ContestProblemFormSubtask = {
+  order: number
+  prerequisiteSubtaskOrdersText: string
+  score: number
+  testCases: ContestProblemFormSubtaskTestCase[]
+  title: string
+}
+
 export type ContestProblemFormValue = {
+  checkerCode: string
   constraints: string
   displayOrder: number
   inputDescription: string
   label: string
   memoryLimitKb: number
   outputDescription: string
+  referenceSolutionCode: string
   score: number
   statement: string
+  subtasks: ContestProblemFormSubtask[]
   testCases: ContestProblemFormTestCase[]
   timeLimitMillis: number
   title: string
+  usesSubtasks: boolean
 }
 
 export type ContestSubmission = {

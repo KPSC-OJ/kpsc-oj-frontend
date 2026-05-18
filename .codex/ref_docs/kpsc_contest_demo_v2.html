@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPSC OJ Contest Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: {
+              page: '#e7e5e4',
+              panel: '#efedea',
+              surface: '#f5f5f4',
+              raised: '#fafaf9',
+              inset: '#e2e0dd'
+            },
+            ink: {
+              900: '#1c1917',
+              800: '#292524',
+              700: '#3f3f46',
+              600: '#52525b',
+              500: '#71717a',
+              400: '#8a8580'
+            },
+            line: {
+              soft: '#e7e5e4',
+              DEFAULT: '#d6d3d1',
+              strong: '#c7c2bd'
+            },
+            accent: {
+              50: '#f0edf3',
+              100: '#e4ddea',
+              300: '#b8a9c8',
+              500: '#8b7aa8',
+              600: '#74628f',
+              700: '#5f5075'
+            },
+            ok: {
+              50: '#edf4ef',
+              100: '#d8e8dd',
+              700: '#3c6f52'
+            },
+            warn: {
+              50: '#f5f0e3',
+              100: '#e9dcc1',
+              700: '#7a5a20'
+            }
+          },
+          boxShadow: {
+            quiet: '0 1px 2px rgba(28,25,23,0.05)',
+            lift: '0 10px 30px rgba(28,25,23,0.07)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-paper-page text-ink-800 antialiased selection:bg-accent-100 selection:text-ink-900">
+  <div class="min-h-screen bg-[linear-gradient(180deg,#e7e5e4_0%,#e2e0dd_48%,#ddd8d2_100%)]">
+    <header class="sticky top-0 z-50 border-b border-line bg-paper-raised/85 backdrop-blur-xl">
+      <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <a href="./kpsc_contest_demo_v2.html" class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-ink-900 text-sm font-black text-paper-raised shadow-quiet">K</div>
+          <div>
+            <div class="text-sm font-black leading-4 text-ink-900">KPSC OJ</div>
+            <div class="text-xs font-medium text-ink-500">Kookmin Online Judge</div>
+          </div>
+        </a>
+        <nav class="hidden items-center gap-6 text-sm font-semibold text-ink-600 md:flex">
+          <a href="#" class="hover:text-ink-900">문제</a>
+          <a href="#" class="hover:text-ink-900">제출</a>
+          <a href="#" class="hover:text-ink-900">랭킹</a>
+          <a href="./kpsc_contest_demo_v2.html" class="font-black text-accent-700">대회</a>
+          <a href="#" class="hover:text-ink-900">출제</a>
+        </nav>
+        <div class="flex items-center gap-2">
+          <button class="rounded-lg px-3 py-2 text-sm font-semibold text-ink-600 hover:bg-paper-inset">로그인</button>
+          <button class="rounded-lg bg-ink-900 px-4 py-2 text-sm font-black text-paper-raised hover:bg-ink-800">시작하기</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="app"></main>
+  </div>
+
+  <template id="contest-list-template">
+    <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div class="mb-6 rounded-3xl border border-line bg-paper-surface p-6 shadow-quiet sm:p-8">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <span class="mb-4 inline-flex rounded-full border border-accent-100 bg-accent-50 px-3 py-1 text-xs font-black text-accent-700">Contest</span>
+            <h1 class="text-3xl font-black tracking-tight text-ink-900 sm:text-4xl">대회</h1>
+            <p class="mt-3 max-w-2xl text-sm leading-7 text-ink-600">대회를 선택하면 별도 대회 페이지로 이동하는 구조입니다. 이 데모에서는 쿼리스트링으로 라우팅을 흉내냅니다.</p>
+          </div>
+          <div class="grid grid-cols-3 gap-3 text-center sm:min-w-[360px]">
+            <div class="rounded-2xl border border-line bg-paper-panel p-4"><div class="text-2xl font-black text-ink-900">2</div><div class="mt-1 text-xs font-bold text-ink-500">진행 중</div></div>
+            <div class="rounded-2xl border border-line bg-paper-panel p-4"><div class="text-2xl font-black text-ink-900">1</div><div class="mt-1 text-xs font-bold text-ink-500">예정</div></div>
+            <div class="rounded-2xl border border-line bg-paper-panel p-4"><div class="text-2xl font-black text-ink-900">12</div><div class="mt-1 text-xs font-bold text-ink-500">종료</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-8 rounded-2xl border border-line bg-paper-surface p-5 shadow-quiet">
+        <div class="mb-4 flex flex-col gap-1">
+          <p class="text-sm font-black text-accent-700">색상 팔레트</p>
+          <h2 class="text-xl font-black text-ink-900">차분한 라이트 토큰</h2>
+        </div>
+        <div class="grid gap-3 text-xs font-bold sm:grid-cols-2 lg:grid-cols-6">
+          <div class="rounded-xl border border-line bg-[#e7e5e4] p-3"><div class="mb-2 h-8 rounded bg-[#e7e5e4] ring-1 ring-line"></div><b>#e7e5e4</b><p class="mt-1 text-ink-500">page</p></div>
+          <div class="rounded-xl border border-line bg-[#f5f5f4] p-3"><div class="mb-2 h-8 rounded bg-[#f5f5f4] ring-1 ring-line"></div><b>#f5f5f4</b><p class="mt-1 text-ink-500">surface</p></div>
+          <div class="rounded-xl border border-line bg-[#fafaf9] p-3"><div class="mb-2 h-8 rounded bg-[#fafaf9] ring-1 ring-line"></div><b>#fafaf9</b><p class="mt-1 text-ink-500">raised</p></div>
+          <div class="rounded-xl border border-line bg-[#d6d3d1] p-3"><div class="mb-2 h-8 rounded bg-[#d6d3d1] ring-1 ring-line-strong"></div><b>#d6d3d1</b><p class="mt-1 text-ink-500">line</p></div>
+          <div class="rounded-xl border border-line bg-[#292524] p-3 text-paper-raised"><div class="mb-2 h-8 rounded bg-[#292524] ring-1 ring-ink-700"></div><b>#292524</b><p class="mt-1 text-paper-inset">text</p></div>
+          <div class="rounded-xl border border-line bg-[#8b7aa8] p-3 text-paper-raised"><div class="mb-2 h-8 rounded bg-[#8b7aa8] ring-1 ring-accent-700"></div><b>#8b7aa8</b><p class="mt-1 text-accent-50">accent</p></div>
+        </div>
+      </div>
+
+      <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm font-black text-accent-700">Contest List</p>
+          <h2 class="text-2xl font-black tracking-tight text-ink-900">대회 목록</h2>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-[260px_140px]">
+          <input class="rounded-xl border border-line bg-paper-raised px-4 py-2.5 text-sm text-ink-800 outline-none placeholder:text-ink-400 focus:border-accent-500 focus:ring-2 focus:ring-accent-100" placeholder="대회 이름 검색" />
+          <select class="rounded-xl border border-line bg-paper-raised px-3 py-2.5 text-sm text-ink-700 outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-100"><option>전체 상태</option><option>진행 중</option><option>예정</option><option>종료</option></select>
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <a href="./kpsc_contest_demo_v2.html?contest=kpsc-spring-2026" class="group block rounded-2xl border border-accent-100 bg-paper-surface p-5 shadow-quiet transition hover:-translate-y-0.5 hover:border-accent-300 hover:bg-paper-raised">
+          <div class="mb-4 flex items-center justify-between"><span class="rounded-full border border-ok-100 bg-ok-50 px-2.5 py-1 text-xs font-black text-ok-700">진행 중</span><span class="text-xs font-bold text-ink-400">Public</span></div>
+          <h3 class="text-xl font-black text-ink-900 group-hover:text-accent-700">KPSC Spring Contest 2026</h3>
+          <p class="mt-2 text-sm leading-6 text-ink-500">신입 부원과 재학생을 위한 봄맞이 알고리즘 대회</p>
+          <div class="mt-5 grid grid-cols-3 gap-2 text-center text-sm"><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">7</b><p class="text-xs text-ink-500">문제</p></div><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">94</b><p class="text-xs text-ink-500">참가</p></div><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">02:14</b><p class="text-xs text-ink-500">남음</p></div></div>
+          <div class="mt-5 flex items-center justify-between border-t border-line-soft pt-4 text-xs font-semibold text-ink-500"><span>2026.05.18 19:00 - 22:00</span><span class="text-accent-700">대회 입장 -></span></div>
+        </a>
+
+        <a href="./kpsc_contest_demo_v2.html?contest=rookie-arena" class="group block rounded-2xl border border-line bg-paper-surface p-5 shadow-quiet transition hover:-translate-y-0.5 hover:border-accent-300 hover:bg-paper-raised">
+          <div class="mb-4 flex items-center justify-between"><span class="rounded-full border border-warn-100 bg-warn-50 px-2.5 py-1 text-xs font-black text-warn-700">예정</span><span class="text-xs font-bold text-ink-400">Kookmin Only</span></div>
+          <h3 class="text-xl font-black text-ink-900 group-hover:text-accent-700">KPSC Rookie Arena</h3>
+          <p class="mt-2 text-sm leading-6 text-ink-500">기초 구현, 그리디, 정렬 위주의 루키 전용 대회</p>
+          <div class="mt-5 grid grid-cols-3 gap-2 text-center text-sm"><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">5</b><p class="text-xs text-ink-500">문제</p></div><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">31</b><p class="text-xs text-ink-500">신청</p></div><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">D-3</b><p class="text-xs text-ink-500">시작</p></div></div>
+          <div class="mt-5 flex items-center justify-between border-t border-line-soft pt-4 text-xs font-semibold text-ink-500"><span>2026.05.21 20:00 - 22:00</span><span class="text-accent-700">상세 보기 -></span></div>
+        </a>
+
+        <a href="./kpsc_contest_demo_v2.html?contest=practice-round" class="group block rounded-2xl border border-line bg-paper-surface p-5 shadow-quiet transition hover:-translate-y-0.5 hover:border-accent-300 hover:bg-paper-raised">
+          <div class="mb-4 flex items-center justify-between"><span class="rounded-full border border-line bg-paper-inset px-2.5 py-1 text-xs font-black text-ink-600">종료</span><span class="text-xs font-bold text-ink-400">Archive</span></div>
+          <h3 class="text-xl font-black text-ink-900 group-hover:text-accent-700">Practice Round #1</h3>
+          <p class="mt-2 text-sm leading-6 text-ink-500">대회 기능 검증을 위한 연습 라운드</p>
+          <div class="mt-5 grid grid-cols-3 gap-2 text-center text-sm"><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">4</b><p class="text-xs text-ink-500">문제</p></div><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">18</b><p class="text-xs text-ink-500">참가</p></div><div class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">종료</b><p class="text-xs text-ink-500">상태</p></div></div>
+          <div class="mt-5 flex items-center justify-between border-t border-line-soft pt-4 text-xs font-semibold text-ink-500"><span>2026.05.12 19:00 - 21:00</span><span class="text-accent-700">결과 보기 -></span></div>
+        </a>
+      </div>
+    </section>
+  </template>
+
+  <template id="contest-detail-template">
+    <section class="border-b border-line bg-paper-surface">
+      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div class="mb-5 flex items-center justify-between">
+          <a href="./kpsc_contest_demo_v2.html" class="rounded-xl border border-line bg-paper-raised px-4 py-2 text-sm font-black text-ink-600 hover:bg-paper-inset">← 대회 목록</a>
+          <div class="flex items-center gap-2 text-xs font-bold text-ink-500"><span class="h-2 w-2 rounded-full bg-ok-700"></span><span>진행 중</span></div>
+        </div>
+        <div class="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
+          <div>
+            <h1 class="text-3xl font-black tracking-tight text-ink-900 sm:text-4xl">KPSC Spring Contest 2026</h1>
+            <p class="mt-3 max-w-2xl text-sm leading-7 text-ink-600">대회 전용 페이지입니다. 일반 OJ 화면과 분리되어 문제, 내 제출, 스코어보드를 대회 기준으로만 보여줍니다.</p>
+          </div>
+          <div class="rounded-2xl border border-accent-100 bg-accent-50 p-5">
+            <div class="text-xs font-black uppercase tracking-wider text-accent-700">Time Remaining</div>
+            <div class="mt-2 text-3xl font-black text-accent-700">02:14:32</div>
+            <div class="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p class="text-xs font-bold text-ink-500">시작</p><p class="font-bold text-ink-900">05.18 19:00</p></div><div><p class="text-xs font-bold text-ink-500">종료</p><p class="font-bold text-ink-900">05.18 22:00</p></div></div>
+          </div>
+        </div>
+        <div class="mt-6 flex flex-wrap gap-2 border-t border-line-soft pt-4">
+          <a href="#problems" class="rounded-xl bg-ink-900 px-4 py-2 text-sm font-black text-paper-raised">문제</a>
+          <a href="#scoreboard" class="rounded-xl px-4 py-2 text-sm font-bold text-ink-600 hover:bg-paper-inset">스코어보드</a>
+          <a href="#submissions" class="rounded-xl px-4 py-2 text-sm font-bold text-ink-600 hover:bg-paper-inset">제출</a>
+          <a href="#notice" class="rounded-xl px-4 py-2 text-sm font-bold text-ink-600 hover:bg-paper-inset">공지</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_340px] lg:px-8">
+      <div class="space-y-6">
+        <div id="problems" class="overflow-hidden rounded-2xl border border-line bg-paper-surface shadow-quiet">
+          <div class="flex items-center justify-between border-b border-line p-5">
+            <div><p class="text-sm font-black text-accent-700">Problems</p><h2 class="text-xl font-black text-ink-900">대회 문제</h2></div>
+            <span class="rounded-full border border-line bg-paper-inset px-3 py-1 text-xs font-bold text-ink-600">7 Problems</span>
+          </div>
+          <table class="w-full min-w-[760px] text-left text-sm">
+            <thead class="border-b border-line bg-paper-panel text-xs uppercase text-ink-500"><tr><th class="px-4 py-3">번호</th><th class="px-4 py-3">제목</th><th class="px-4 py-3">점수</th><th class="px-4 py-3">제출</th><th class="px-4 py-3">정답률</th><th class="px-4 py-3">상태</th></tr></thead>
+            <tbody class="divide-y divide-line-soft">
+              <tr class="hover:bg-paper-panel"><td class="px-4 py-4 font-mono text-ink-500">A</td><td class="px-4 py-4 font-black text-ink-900">봄맞이 A+B</td><td class="px-4 py-4">100</td><td class="px-4 py-4">128</td><td class="px-4 py-4">84.3%</td><td class="px-4 py-4 text-ok-700">Solved</td></tr>
+              <tr class="hover:bg-paper-panel"><td class="px-4 py-4 font-mono text-ink-500">B</td><td class="px-4 py-4 font-black text-ink-900">동아리방 청소 순서</td><td class="px-4 py-4">150</td><td class="px-4 py-4">91</td><td class="px-4 py-4">52.7%</td><td class="px-4 py-4 text-ink-400">Unsolved</td></tr>
+              <tr class="hover:bg-paper-panel"><td class="px-4 py-4 font-mono text-ink-500">C</td><td class="px-4 py-4 font-black text-ink-900">강의실 최단 경로</td><td class="px-4 py-4">200</td><td class="px-4 py-4">63</td><td class="px-4 py-4">31.2%</td><td class="px-4 py-4 text-ink-400">Unsolved</td></tr>
+              <tr class="hover:bg-paper-panel"><td class="px-4 py-4 font-mono text-ink-500">D</td><td class="px-4 py-4 font-black text-ink-900">Judge Worker Queue</td><td class="px-4 py-4">300</td><td class="px-4 py-4">27</td><td class="px-4 py-4">14.8%</td><td class="px-4 py-4 text-ink-400">Unsolved</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="scoreboard" class="overflow-hidden rounded-2xl border border-line bg-paper-surface shadow-quiet">
+          <div class="flex items-center justify-between border-b border-line p-5">
+            <div><p class="text-sm font-black text-accent-700">Scoreboard</p><h2 class="text-xl font-black text-ink-900">스코어보드</h2></div>
+            <button class="rounded-xl border border-line px-3 py-2 text-xs font-bold text-ink-600 hover:bg-paper-inset">새로고침</button>
+          </div>
+          <table class="w-full min-w-[760px] text-left text-sm">
+            <thead class="border-b border-line bg-paper-panel text-xs uppercase text-ink-500"><tr><th class="px-4 py-3">순위</th><th class="px-4 py-3">팀/유저</th><th class="px-4 py-3">점수</th><th class="px-4 py-3">패널티</th><th class="px-4 py-3">A</th><th class="px-4 py-3">B</th><th class="px-4 py-3">C</th><th class="px-4 py-3">D</th></tr></thead>
+            <tbody class="divide-y divide-line-soft">
+              <tr class="bg-accent-50"><td class="px-4 py-4 font-black">1</td><td class="px-4 py-4 font-black">kpsc_master</td><td class="px-4 py-4 font-black text-accent-700">750</td><td class="px-4 py-4">214</td><td class="px-4 py-4 text-ok-700">+1</td><td class="px-4 py-4 text-ok-700">+</td><td class="px-4 py-4 text-ok-700">+2</td><td class="px-4 py-4 text-ink-400">-</td></tr>
+              <tr><td class="px-4 py-4 font-black">2</td><td class="px-4 py-4 font-black">minjae</td><td class="px-4 py-4 font-black text-accent-700">450</td><td class="px-4 py-4">167</td><td class="px-4 py-4 text-ok-700">+</td><td class="px-4 py-4 text-ok-700">+1</td><td class="px-4 py-4 text-ink-400">-2</td><td class="px-4 py-4 text-ink-400">-</td></tr>
+              <tr><td class="px-4 py-4 font-black">3</td><td class="px-4 py-4 font-black">rookie_01</td><td class="px-4 py-4 font-black text-accent-700">250</td><td class="px-4 py-4">92</td><td class="px-4 py-4 text-ok-700">+</td><td class="px-4 py-4 text-ink-400">-1</td><td class="px-4 py-4 text-ink-400">-</td><td class="px-4 py-4 text-ink-400">-</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="space-y-4">
+        <div class="rounded-2xl border border-line bg-paper-surface p-5 shadow-quiet">
+          <button class="w-full rounded-xl bg-accent-600 px-4 py-3 text-sm font-black text-paper-raised hover:bg-accent-700">대회 참가하기</button>
+          <button class="mt-3 w-full rounded-xl border border-line px-4 py-3 text-sm font-black text-ink-700 hover:bg-paper-inset">내 제출 보기</button>
+        </div>
+        <div id="notice" class="rounded-2xl border border-line bg-paper-surface p-5 shadow-quiet">
+          <h3 class="font-black text-ink-900">공지</h3>
+          <div class="mt-4 space-y-3 text-sm leading-6 text-ink-600">
+            <p class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">19:20</b> B번 예제 설명의 오타를 수정했습니다.</p>
+            <p class="rounded-xl border border-line-soft bg-paper-panel p-3"><b class="text-ink-900">19:05</b> 대회가 시작되었습니다.</p>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-line bg-paper-surface p-5 shadow-quiet">
+          <h3 class="font-black text-ink-900">대회 정보</h3>
+          <dl class="mt-4 space-y-3 text-sm">
+            <div class="flex justify-between"><dt class="text-ink-500">운영진</dt><dd class="font-bold text-ink-900">admin_kpsc</dd></div>
+            <div class="flex justify-between"><dt class="text-ink-500">참가자</dt><dd class="font-bold text-ink-900">94명</dd></div>
+            <div class="flex justify-between"><dt class="text-ink-500">언어</dt><dd class="font-bold text-ink-900">C++17, Java, Python</dd></div>
+            <div class="flex justify-between"><dt class="text-ink-500">공개 여부</dt><dd class="font-bold text-ink-900">Public</dd></div>
+          </dl>
+        </div>
+      </aside>
+    </section>
+  </template>
+
+  <script>
+    const app = document.getElementById('app');
+    const params = new URLSearchParams(window.location.search);
+    const contestId = params.get('contest');
+    const listTemplate = document.getElementById('contest-list-template');
+    const detailTemplate = document.getElementById('contest-detail-template');
+
+    app.appendChild((contestId ? detailTemplate : listTemplate).content.cloneNode(true));
+  </script>
+</body>
+</html>

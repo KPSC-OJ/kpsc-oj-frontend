@@ -11,11 +11,13 @@
 | POST | /api/v1/auth/logout | authenticated | 현재 access token session 폐기 |
 | GET | /api/v1/contests | public | 대회 목록 조회 |
 | GET | /api/v1/contests/{contestId} | public | 대회 상세와 현재 사용자 참가/운영진 상태 조회 |
-| POST | /api/v1/contests/{contestId}/join | authenticated | 대회 참가 |
+| POST | /api/v1/contests/{contestId}/join | authenticated | 대회 참가 또는 참가 승인 대기 신청 |
+| GET | /api/v1/contests/{contestId}/participants/pending | authenticated | 운영진 참가 승인 대기 목록 조회 |
+| POST | /api/v1/contests/{contestId}/participants/{participantId}/approve | authenticated | 운영진 참가 신청 승인 |
 | GET | /api/v1/contests/{contestId}/problems | public | 대회 문제 목록 조회 |
 | GET | /api/v1/contests/{contestId}/problems/{contestProblemId} | public | 대회 문제 상세 조회 |
-| POST | /api/v1/contests/{contestId}/problems | authenticated | 운영진 대회 문제 생성 |
-| PATCH | /api/v1/contests/{contestId}/problems/{contestProblemId} | authenticated | 운영진 대회 문제 수정 |
+| POST | /api/v1/contests/{contestId}/problems | authenticated | 운영진 대회 문제 생성 및 예시 정답 검증 |
+| PATCH | /api/v1/contests/{contestId}/problems/{contestProblemId} | authenticated | 운영진 대회 문제 정의와 테스트 세트 수정 |
 | DELETE | /api/v1/contests/{contestId}/problems/{contestProblemId} | authenticated | 운영진 대회 문제 삭제 |
 | POST | /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions | authenticated | 대회 문제 제출 생성 |
 | GET | /api/v1/contests/{contestId}/submissions/me | authenticated | 내 대회 제출 목록 조회 |

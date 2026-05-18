@@ -22,7 +22,7 @@ export function SubmissionsPage() {
   return (
     <section>
       <div className="mb-6">
-        <p className="text-sm font-bold text-blue-600">Submissions</p>
+        <p className="text-sm font-bold text-blue-600">제출</p>
         <h1 className="text-2xl font-black text-slate-950">내 제출</h1>
         <p className="mt-1 text-sm text-slate-500">
           백엔드에 저장된 내 제출 상태와 점수를 확인합니다.

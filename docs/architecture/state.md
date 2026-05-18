@@ -12,21 +12,24 @@
 | Created submission state | `SubmitPage` | React state | No | `POST /api/v1/submissions` 성공 응답 표시 상태 |
 | Submission detail state | `useSubmissionDetail` | Backend API | No | `GET /api/v1/submissions/{submissionId}` 응답에서 변환한 제출 상세, 전체 점수, 서브테스크 채점 결과 상태 |
 | Submit panel UI state | `SubmitPage` | React state | No | 제출 작업 화면 좌측 패널의 `문제 설명`/`내 제출` 탭, 문제별 제출 목록 page, 제출 성공 후 목록 refresh key |
+| Workspace split ratio UI state | `ResizableSplitPane` | React state | No | 일반 제출과 대회 제출 workspace에서 문제 영역과 코드 작성 영역의 현재 분할 비율. pointer drag 또는 keyboard 입력으로만 변경되며 저장하지 않는다. |
 | Route state | `react-router-dom` | browser location | No | URL path와 `:id` 라우트 파라미터 |
 | Example copy feedback state | `ProblemExampleBlock` | React state | No | 예제 Input/Output 복사 버튼의 idle/copied/failed 표시 상태 |
 | Problem definition form state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 request DTO로 변환되는 제목, 태그, 제한, Markdown 본문, 커스텀 checker 사용 여부와 optional checker code, 예제/일반 실제 테스트 케이스, 서브테스크 사용 여부, 서브테스크별 테스트 케이스와 선행 order 입력값 |
 | Problem mutation result state | `ProblemDefinitionForm` | React state | No | 문제 생성/수정 성공 응답과 오류 메시지 표시 상태 |
 | Code editor UI state | `SubmitPage` | React state | No | Monaco Editor의 선택 언어와 현재 소스 코드. 제출 소스 코드는 최대 10000자까지 허용한다. |
-| Contest list state | `useContestList` | Backend API | No | `GET /api/v1/contests` 응답에서 변환한 대회 목록과 status group 표시 상태. `startTime`/`endTime`은 `yyyy-MM-dd-hh-mm` 표시 문자열로 정규화한다. |
+| Contest list state | `useContestList` | Backend API | No | `GET /api/v1/contests` 응답에서 변환한 대회 목록. `startTime`/`endTime`은 `yyyy-MM-dd-hh-mm` 표시 문자열로 정규화하고, `visibility`는 참가 승인 정책으로 표시한다. |
+| Contest list filter UI state | `ContestsPage` | React state | No | 대회 목록 카드 필터링을 위한 검색어와 status filter. 필터링은 화면 표시만 바꾸며 API query에는 영향을 주지 않는다. |
 | Contest detail state | `useContest` | Backend API | No | `GET /api/v1/contests/{contestId}` 응답에서 변환한 대회 상세, `isStaff`, `isParticipant` 상태. `startTime`/`endTime`은 `yyyy-MM-dd-hh-mm` 표시 문자열로 정규화한다. |
+| Contest pending participants state | `usePendingContestParticipants` | Backend API | No | 운영진이 `GET /api/v1/contests/{contestId}/participants/pending` 응답에서 변환한 승인 대기 참가 신청 목록. `requestedAt`은 `yyyy-MM-dd-hh-mm` 표시 문자열로 정규화한다. |
 | Contest problem list state | `useContestProblems` | Backend API | No | `GET /api/v1/contests/{contestId}/problems` 응답에서 변환한 ContestProblem 목록과 solvedStatus |
-| Contest problem detail state | `useContestProblem` | Backend API | No | `GET /api/v1/contests/{contestId}/problems/{contestProblemId}` 응답에서 변환한 ContestProblem 상세와 EXAMPLE testcase |
+| Contest problem detail state | `useContestProblem` | Backend API | No | `GET /api/v1/contests/{contestId}/problems/{contestProblemId}` 응답에서 변환한 ContestProblem 상세, EXAMPLE testcase, 서브테스크 메타데이터 |
 | Contest problem workspace UI state | `ContestProblemDetailPage` | React state | No | 대회 문제 제출 화면 좌측 패널의 `문제 설명`/`내 제출` 탭, 선택 언어, 소스 코드, 제출 오류, 생성된 대회 제출 상태 |
-| Contest problem form state | `ContestProblemForm` | React state | No | ContestProblem mutation request DTO로 변환되는 label, title, statement, input/output description, constraints, limits, score, displayOrder, EXAMPLE/HIDDEN testcase 입력값 |
+| Contest problem form state | `ContestProblemForm` | React state | No | ContestProblem mutation request DTO로 변환되는 label, title, statement, input/output description, constraints, limits, score, displayOrder, 선택 checker code, 생성 전용 reference solution code, EXAMPLE/HIDDEN testcase, 서브테스크 사용 여부와 서브테스크별 테스트 케이스/선행 order 입력값 |
 | Contest submission list state | `useContestSubmissions` | Backend API | No | 내 대회 제출 또는 운영진 전체 제출 목록. `submittedAt`은 `yyyy-MM-dd-hh-mm` 표시 문자열로 정규화하고, 채점 중 제출이 있으면 2.5초 간격으로 목록을 polling한다. |
 | Contest created submission state | `ContestProblemDetailPage` | React state | No | 대회 문제 제출 성공 응답 표시 상태 |
 | Contest scoreboard state | `useContestScoreboard` | Backend API | No | `GET /api/v1/contests/{contestId}/scoreboard` 응답에서 변환한 문제 header와 row/cell 상태 |
-| Theme mode state | `ThemeProvider` | React state + localStorage | Yes | 라이트/다크 모드 선택값. `kpsc_oj_theme_mode` localStorage key와 document `data-theme` 속성으로 반영한다. |
+| Theme mode state | `ThemeProvider` | React state + localStorage | Yes | 라이트/다크 모드 선택값. `kpsc_oj_theme_mode` localStorage key와 document `data-theme` 속성으로 반영한다. 다크 모드는 black/zinc 배경과 violet accent 색상 override를 사용한다. |
 | Auth session state | `AuthProvider` | React state + localStorage | Yes | access token, refresh token, token type, 만료 시각, service username, role, access token 만료 전 자동 refresh 예약 |
 | Pending signup state | `AuthProvider` | React state | No | `requiresSignup=true` 로그인 응답에서 생성되는 signup token과 검증된 Google email |
 
@@ -51,8 +54,10 @@
 | `SubmissionStatus` | string | 백엔드가 반환하는 제출 상태 enum | Depends | 프론트엔드는 알 수 없는 상태도 원문으로 표시한다. |
 | `SubmissionSubtaskResultStatus` | `ACCEPTED` | 해당 서브테스크의 HIDDEN 테스트 케이스 모두 통과 | Yes | 서브테스크 결과 배지로 표시 |
 | `SubmissionSubtaskResultStatus` | `FAILED` | 해당 서브테스크의 HIDDEN 테스트 케이스 중 하나 이상 실패 | Yes | 서브테스크 결과 배지로 표시 |
-| `ContestVisibilityDto` | `PUBLIC` | 비로그인 조회 가능한 대회 | No | GET Contest API 공개 범위 |
-| `ContestVisibilityDto` | `PRIVATE` | ADMIN, ContestStaff, ContestParticipant만 조회 가능한 대회 | No | 백엔드가 최종 권한 검증 |
+| `ContestVisibilityDto` | `PUBLIC` | 참가 신청 즉시 승인 대회 | No | 목록과 상세 UI에서 즉시 승인 정책으로 표시 |
+| `ContestVisibilityDto` | `PRIVATE` | 운영진 승인 후 참가 가능한 대회 | No | 참가 신청 성공 시 `PENDING`이 될 수 있음 |
+| `ContestParticipationStatusDto` | `PENDING` | 운영진 승인 대기 중인 참가 신청 | No | `POST /join`, pending participants API에서 사용 |
+| `ContestParticipationStatusDto` | `APPROVED` | 승인된 대회 참가자 | No | `POST /join`, approve API에서 사용 |
 | `ContestRegistrationModeDto` | `OPEN` | 일반 사용자가 직접 참가 가능한 대회 | No | `POST /api/v1/contests/{contestId}/join` 허용 |
 | `ContestRegistrationModeDto` | `STAFF_ONLY` | 운영진 또는 ADMIN이 참가를 제한하는 대회 | No | 일반 사용자 직접 참가/미참가 제출은 백엔드가 거부 |
 | `ContestStatusDto` | `DRAFT` | 초안 대회 | No | 프론트는 초안 배지로 표시 |
@@ -74,7 +79,9 @@
 | --- | --- | --- | --- | --- |
 | none | `QUEUED` | 사용자가 `POST /api/v1/submissions`로 제출 생성 | Backend service | 생성된 제출 ID와 제출 시각을 화면에 표시한다. |
 | `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` | terminal status | 백엔드 비동기 채점 완료 후 상세 조회 | Backend processor | `useSubmissionDetail`이 2.5초 간격으로 상세 조회를 반복해 결과를 갱신한다. 서브테스크 문제는 `totalScore`와 `subtaskResults`로 획득 점수를 표시한다. |
-| not participant | participant | 사용자가 `POST /api/v1/contests/{contestId}/join` 호출 | Backend contest service | `ContestLayout` 또는 `ContestProblemWorkspaceLayout`이 대회 상세를 재조회해 `isParticipant=true`를 반영한다. |
+| not participant | pending participant | 사용자가 `PRIVATE` 대회에서 `POST /api/v1/contests/{contestId}/join` 호출 | Backend contest service | `ContestHomePage`가 승인 대기 안내를 표시한다. 대회 상세에는 아직 `isParticipant=false`가 유지될 수 있다. |
+| not participant | participant | 사용자가 `PUBLIC` 대회에서 `POST /api/v1/contests/{contestId}/join` 호출 | Backend contest service | `ContestLayout` 또는 `ContestProblemWorkspaceLayout`이 대회 상세를 재조회해 `isParticipant=true`를 반영한다. |
+| pending participant | participant | 운영진이 `POST /api/v1/contests/{contestId}/participants/{participantId}/approve` 호출 | Backend contest service | `ContestHomePage`가 승인 대기 목록을 재조회한다. |
 | none | `QUEUED` | 사용자가 `POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions`로 대회 제출 생성 | Backend service | 생성된 contest submission ID와 제출 시각을 표시하고 대회 제출 목록 polling을 시작한다. |
 | `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` | terminal status | 백엔드 비동기 채점 완료 후 대회 제출 목록 조회 | Backend processor | `useContestSubmissions`가 2.5초 간격으로 목록을 재조회해 상태를 갱신한다. |
 | `light` | `dark` | 사용자가 Header 테마 버튼 클릭 | ThemeProvider | localStorage와 document `data-theme`를 갱신하고 Monaco editor를 dark theme로 표시한다. |
@@ -103,4 +110,4 @@
 - 저장 값은 `light` 또는 `dark`만 허용한다.
 - 저장 값이 없으면 브라우저의 `prefers-color-scheme: dark` 결과를 초기값으로 사용하고, 그 외에는 `light`를 사용한다.
 - `ThemeProvider`는 현재 mode를 document root의 `data-theme` 속성과 `dark` class에 반영한다.
-- 일반 UI 색상은 `src/index.css`의 `data-theme="dark"` 전역 오버라이드로 전환하고, Monaco Editor는 `CodeEditor`가 `vs`/`vs-dark` theme를 선택한다.
+- 일반 UI 색상은 `src/index.css`의 `data-theme="dark"` 전역 오버라이드로 전환한다. 다크 모드는 black/zinc 기반 page/card/line 색상과 violet accent를 사용하고, 참가 승인 정책/상태 badge 색상도 각 tone별 다크 팔레트로 전환한다. Monaco Editor는 `CodeEditor`가 `vs`/`vs-dark` theme를 선택한다.

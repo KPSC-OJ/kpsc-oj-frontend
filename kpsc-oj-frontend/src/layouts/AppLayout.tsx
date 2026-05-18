@@ -13,11 +13,11 @@ type AppNavigationItem = {
 }
 
 const navigationItems: AppNavigationItem[] = [
-  { icon: BookOpen, label: 'Problems', to: '/problems' },
-  { icon: Medal, label: 'Contests', to: '/contests' },
-  { icon: ClipboardList, label: 'Submissions', to: '/submissions' },
-  { icon: Trophy, label: 'Ranking', to: '/ranking' },
-  { adminOnly: true, icon: ShieldPlus, label: 'Admin', to: '/admin/problems/new' },
+  { icon: BookOpen, label: '문제', to: '/problems' },
+  { icon: Medal, label: '대회', to: '/contests' },
+  { icon: ClipboardList, label: '제출', to: '/submissions' },
+  { icon: Trophy, label: '랭킹', to: '/ranking' },
+  { adminOnly: true, icon: ShieldPlus, label: '출제', to: '/admin/problems/new' },
 ]
 
 export function AppLayout() {
@@ -28,7 +28,7 @@ export function AppLayout() {
       <SiteHeader />
       <div className="mx-auto grid w-full max-w-7xl flex-1 lg:grid-cols-[240px_1fr]">
         <aside className="hidden min-h-[calc(100vh-4rem)] border-r border-slate-200 bg-slate-50/80 p-4 lg:block">
-          <div className="mb-4 px-3 text-xs font-bold uppercase text-slate-400">Menu</div>
+          <div className="mb-4 px-3 text-xs font-bold text-slate-400">메뉴</div>
           <nav className="space-y-1 text-sm font-semibold">
             {navigationItems.filter((item) => !item.adminOnly || isAdmin).map((item) => {
               const Icon = item.icon

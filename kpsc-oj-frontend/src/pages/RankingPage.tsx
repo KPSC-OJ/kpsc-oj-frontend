@@ -5,7 +5,7 @@ export function RankingPage() {
   return (
     <section>
       <div className="mb-6">
-        <p className="text-sm font-bold text-blue-600">Ranking</p>
+        <p className="text-sm font-bold text-blue-600">랭킹</p>
         <h1 className="text-2xl font-black text-slate-950">랭킹</h1>
         <p className="mt-1 text-sm text-slate-500">KPSC OJ 랭킹 기능을 준비하고 있습니다.</p>
       </div>

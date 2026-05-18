@@ -23,12 +23,12 @@ export function ContestSubmissionTable({
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
-            <th className="px-4 py-3">Problem</th>
-            {showSubmitter ? <th className="px-4 py-3">User</th> : null}
-            <th className="px-4 py-3">Language</th>
-            <th className="px-4 py-3">Status</th>
-            <th className="px-4 py-3">Score</th>
-            <th className="px-4 py-3">Submitted</th>
+            <th className="px-4 py-3">문제</th>
+            {showSubmitter ? <th className="px-4 py-3">사용자</th> : null}
+            <th className="px-4 py-3">언어</th>
+            <th className="px-4 py-3">상태</th>
+            <th className="px-4 py-3">점수</th>
+            <th className="px-4 py-3">제출 시각</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">

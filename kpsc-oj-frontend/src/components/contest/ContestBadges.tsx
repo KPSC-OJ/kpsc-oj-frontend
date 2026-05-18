@@ -20,8 +20,8 @@ const contestProblemStatusLabels: Record<ContestProblemSolvedStatusDto, string> 
 }
 
 const contestVisibilityLabels: Record<ContestVisibilityDto, string> = {
-  PRIVATE: '비공개',
-  PUBLIC: '공개',
+  PRIVATE: '승인 필요',
+  PUBLIC: '즉시 승인',
 }
 
 export function ContestStatusBadge({

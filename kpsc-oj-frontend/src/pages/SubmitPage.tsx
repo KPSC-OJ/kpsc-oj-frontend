@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { Badge } from '../components/common/Badge'
 import { Button } from '../components/common/Button'
 import { MarkdownContent } from '../components/common/MarkdownContent'
+import { ResizableSplitPane } from '../components/common/ResizableSplitPane'
 import { CodeEditor, type CodeEditorLanguage } from '../components/problem/CodeEditor'
 import { ProblemExampleBlock } from '../components/problem/ProblemExampleBlock'
 import { ProblemSubmissionHistory } from '../components/submission/ProblemSubmissionHistory'
@@ -247,8 +248,10 @@ export function SubmitPage() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white">
-      <div className="grid min-h-0 flex-1 grid-rows-[0.9fr_1.1fr] overflow-hidden lg:grid-cols-[minmax(360px,0.85fr)_minmax(520px,1.15fr)] lg:grid-rows-none">
-        <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
+      <ResizableSplitPane
+        ariaLabel="문제 영역과 코드 작성 영역 크기 조절"
+        firstPane={
+        <aside className="flex h-full min-h-0 w-full flex-col border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="flex shrink-0 items-center gap-6 border-b border-slate-200 px-5">
             <button
               aria-pressed={activeProblemPanelTab === 'statement'}
@@ -348,8 +351,9 @@ export function SubmitPage() {
             )}
           </div>
         </aside>
-
-        <div className="flex min-h-0 flex-col bg-white">
+        }
+        secondPane={
+        <div className="flex h-full min-h-0 w-full flex-col bg-white">
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
             <div>
               <div className="text-xs font-bold uppercase text-slate-400">코드 작성</div>
@@ -472,7 +476,8 @@ export function SubmitPage() {
             </div>
           </div>
         </div>
-      </div>
+        }
+      />
     </div>
   )
 }

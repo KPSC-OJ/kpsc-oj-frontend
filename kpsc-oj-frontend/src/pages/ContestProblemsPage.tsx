@@ -38,7 +38,7 @@ export function ContestProblemsPage(): ReactElement {
     <div className="grid gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-black text-blue-600">Problems</p>
+          <p className="text-sm font-black text-blue-600">대회 문제</p>
           <h2 className="text-xl font-black text-slate-950">대회 문제 목록</h2>
         </div>
         {contest.isStaff ? (
@@ -64,11 +64,11 @@ export function ContestProblemsPage(): ReactElement {
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-4 py-3">Label</th>
-                <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Score</th>
-                <th className="px-4 py-3">Status</th>
-                {contest.isStaff ? <th className="px-4 py-3 text-right">Manage</th> : null}
+                <th className="px-4 py-3">번호</th>
+                <th className="px-4 py-3">제목</th>
+                <th className="px-4 py-3">점수</th>
+                <th className="px-4 py-3">상태</th>
+                {contest.isStaff ? <th className="px-4 py-3 text-right">관리</th> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

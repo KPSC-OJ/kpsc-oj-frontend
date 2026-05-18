@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  approveContestParticipant,
   createContestProblem,
   deleteContestProblem,
   getContest,
+  getPendingContestParticipants,
   getContestProblem,
   getContestProblems,
   getContestScoreboard,
@@ -18,7 +20,9 @@ import type { AuthApiError } from '../types/auth'
 import type {
   ContestCreatedSubmission,
   ContestDetail,
+  ContestJoinResult,
   ContestListItem,
+  ContestPendingParticipant,
   ContestProblemDetail,
   ContestProblemFormValue,
   ContestProblemListItem,
@@ -27,7 +31,9 @@ import type {
 } from '../types/contest'
 import type {
   ContestDetailResponseDto,
+  ContestJoinResponseDto,
   ContestListItemResponseDto,
+  ContestPendingParticipantResponseDto,
   ContestProblemDetailResponseDto,
   ContestProblemListItemResponseDto,
   ContestProblemMutationRequestDto,
@@ -108,6 +114,27 @@ function mapContestDetail(responseDto: ContestDetailResponseDto): ContestDetail 
   }
 }
 
+function mapContestJoinResponse(responseDto: ContestJoinResponseDto): ContestJoinResult {
+  return {
+    contestId: responseDto.contestId,
+    joined: responseDto.joined,
+    participationStatus:
+      responseDto.participationStatus ?? (responseDto.joined ? 'APPROVED' : 'PENDING'),
+  }
+}
+
+function mapContestPendingParticipant(
+  responseDto: ContestPendingParticipantResponseDto,
+): ContestPendingParticipant {
+  return {
+    participantId: responseDto.participantId,
+    requestedAt: formatContestDateTime(responseDto.requestedAt),
+    serviceUsername: responseDto.serviceUsername,
+    status: responseDto.status,
+    userAccountId: responseDto.userAccountId,
+  }
+}
+
 function mapContestProblemListItem(
   responseDto: ContestProblemListItemResponseDto,
 ): ContestProblemListItem {
@@ -139,6 +166,17 @@ function mapContestProblemDetail(
     outputDescription: responseDto.outputDescription,
     score: responseDto.score,
     statement: responseDto.statement,
+    subtasks: [...(responseDto.subtasks ?? [])]
+      .sort((leftSubtask, rightSubtask) => leftSubtask.order - rightSubtask.order)
+      .map((subtaskDto) => ({
+        order: subtaskDto.order,
+        prerequisiteSubtaskOrders: subtaskDto.prerequisiteSubtaskOrders ?? [],
+        score: subtaskDto.score,
+        testCases: subtaskDto.testCases.map((testCaseDto) => ({
+          order: testCaseDto.order,
+        })),
+        title: subtaskDto.title,
+      })),
     timeLimitMillis: responseDto.timeLimitMillis,
     title: responseDto.title,
   }
@@ -197,10 +235,33 @@ function mapContestScoreboard(responseDto: ContestScoreboardResponseDto): Contes
   }
 }
 
+function parseContestSubtaskPrerequisiteOrders(value: string): number[] {
+  if (!value.trim()) {
+    return []
+  }
+
+  return value
+    .split(',')
+    .map((orderText) => Number(orderText.trim()))
+    .filter((order) => Number.isInteger(order) && order > 0)
+}
+
 function mapContestProblemFormValue(
   formValue: ContestProblemFormValue,
+  includeReferenceSolution: boolean,
 ): ContestProblemMutationRequestDto {
-  return {
+  const checkerCode = formValue.checkerCode.trim()
+  const testCases = formValue.testCases
+    .filter((testCase) => !formValue.usesSubtasks || testCase.kind === 'EXAMPLE')
+    .map((testCase) => ({
+      caseOrder: testCase.caseOrder,
+      inputText: testCase.inputText,
+      kind: testCase.kind,
+      outputText: testCase.outputText,
+    }))
+
+  const requestDto: ContestProblemMutationRequestDto = {
+    checkerCode: checkerCode ? formValue.checkerCode : null,
     constraints: formValue.constraints,
     displayOrder: formValue.displayOrder,
     inputDescription: formValue.inputDescription,
@@ -209,14 +270,31 @@ function mapContestProblemFormValue(
     outputDescription: formValue.outputDescription,
     score: formValue.score,
     statement: formValue.statement,
-    testCases: formValue.testCases.map((testCase) => ({
-      caseOrder: testCase.caseOrder,
-      inputText: testCase.inputText,
-      kind: testCase.kind,
-      outputText: testCase.outputText,
-    })),
+    subtasks: formValue.usesSubtasks
+      ? formValue.subtasks.map((subtask) => ({
+          order: subtask.order,
+          prerequisiteSubtaskOrders: parseContestSubtaskPrerequisiteOrders(
+            subtask.prerequisiteSubtaskOrdersText,
+          ),
+          score: subtask.score,
+          testCases: subtask.testCases.map((testCase) => ({
+            input: testCase.inputText,
+            output: testCase.outputText,
+          })),
+          title: subtask.title,
+        }))
+      : [],
+    testCases,
     timeLimitMillis: formValue.timeLimitMillis,
     title: formValue.title,
+  }
+
+  if (includeReferenceSolution) {
+    requestDto.referenceSolutionCode = formValue.referenceSolutionCode
+  }
+
+  return {
+    ...requestDto,
   }
 }
 
@@ -459,22 +537,131 @@ export function useContestProblem(
 
 /** 대회 참가 요청을 수행한다. 성공 후 호출자가 대회 상세을 다시 조회한다. */
 export function useJoinContest(): {
-  joinContestWithCurrentSession: (contestId: string) => Promise<void>
+  joinContestWithCurrentSession: (contestId: string) => Promise<ContestJoinResult>
 } {
   const { isAuthenticated, requestWithFreshSession } = useAuth()
 
   const joinContestWithCurrentSession = useCallback(
-    async (contestId: string): Promise<void> => {
+    async (contestId: string): Promise<ContestJoinResult> => {
       if (!isAuthenticated) {
         throw createMissingSessionError()
       }
 
-      await requestWithFreshSession((accessToken) => joinContest(accessToken, contestId))
+      const responseDto = await requestWithFreshSession((accessToken) =>
+        joinContest(accessToken, contestId),
+      )
+
+      return mapContestJoinResponse(responseDto)
     },
     [isAuthenticated, requestWithFreshSession],
   )
 
   return { joinContestWithCurrentSession }
+}
+
+/** 운영진의 승인 대기 참가 신청 목록을 조회한다. */
+export function usePendingContestParticipants(
+  contestId: string | undefined,
+  enabled: boolean,
+  refreshKey = 0,
+): {
+  errorMessage: string | null
+  isLoading: boolean
+  participants: ContestPendingParticipant[]
+} {
+  const { isAuthenticated, requestWithFreshSession } = useAuth()
+  const [participants, setParticipants] = useState<ContestPendingParticipant[]>([])
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(enabled)
+
+  useEffect(() => {
+    let isActive = true
+
+    async function loadPendingParticipants(): Promise<void> {
+      if (!enabled) {
+        setParticipants([])
+        setErrorMessage(null)
+        setIsLoading(false)
+
+        return
+      }
+
+      if (!isAuthenticated) {
+        setParticipants([])
+        setErrorMessage('로그인 후 참가 승인 대기 목록을 확인할 수 있습니다.')
+        setIsLoading(false)
+
+        return
+      }
+
+      if (!contestId) {
+        setParticipants([])
+        setErrorMessage('대회 ID가 올바르지 않습니다.')
+        setIsLoading(false)
+
+        return
+      }
+
+      setIsLoading(true)
+      setErrorMessage(null)
+
+      try {
+        const responseDto = await requestWithFreshSession((accessToken) =>
+          getPendingContestParticipants(accessToken, contestId),
+        )
+
+        if (isActive) {
+          setParticipants(responseDto.map(mapContestPendingParticipant))
+        }
+      } catch (error) {
+        if (isActive) {
+          setParticipants([])
+          setErrorMessage(
+            getContestErrorMessage(error, '참가 승인 대기 목록을 불러오지 못했습니다.'),
+          )
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadPendingParticipants()
+
+    return () => {
+      isActive = false
+    }
+  }, [contestId, enabled, isAuthenticated, refreshKey, requestWithFreshSession])
+
+  return { errorMessage, isLoading, participants }
+}
+
+/** 운영진의 참가 승인 요청을 수행한다. */
+export function useContestParticipantApprovals(): {
+  approveParticipantWithCurrentSession: (
+    contestId: string,
+    participantId: string,
+  ) => Promise<ContestPendingParticipant>
+} {
+  const { isAuthenticated, requestWithFreshSession } = useAuth()
+
+  const approveParticipantWithCurrentSession = useCallback(
+    async (contestId: string, participantId: string): Promise<ContestPendingParticipant> => {
+      if (!isAuthenticated) {
+        throw createMissingSessionError()
+      }
+
+      const responseDto = await requestWithFreshSession((accessToken) =>
+        approveContestParticipant(accessToken, contestId, participantId),
+      )
+
+      return mapContestPendingParticipant(responseDto)
+    },
+    [isAuthenticated, requestWithFreshSession],
+  )
+
+  return { approveParticipantWithCurrentSession }
 }
 
 /** 운영진 전용 ContestProblem 생성/수정/삭제 요청을 수행한다. */
@@ -506,7 +693,7 @@ export function useContestProblemMutations(): {
       requireSession()
 
       await requestWithFreshSession((accessToken) =>
-        createContestProblem(accessToken, contestId, mapContestProblemFormValue(formValue)),
+        createContestProblem(accessToken, contestId, mapContestProblemFormValue(formValue, true)),
       )
     },
     [requestWithFreshSession, requireSession],
@@ -525,7 +712,7 @@ export function useContestProblemMutations(): {
           accessToken,
           contestId,
           contestProblemId,
-          mapContestProblemFormValue(formValue),
+          mapContestProblemFormValue(formValue, false),
         ),
       )
     },

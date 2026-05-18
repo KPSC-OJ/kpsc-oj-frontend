@@ -3,6 +3,7 @@ import type {
   ContestDetailResponseDto,
   ContestJoinResponseDto,
   ContestListItemResponseDto,
+  ContestPendingParticipantResponseDto,
   ContestProblemDetailResponseDto,
   ContestProblemListItemResponseDto,
   ContestProblemMutationRequestDto,
@@ -13,7 +14,7 @@ import type {
   ContestSubmissionResponseDto,
 } from '../types/contestApi'
 
-/** 대회 목록을 조회한다. 로그인 세션이 있으면 비공개 대회 노출 판단에 사용된다. */
+/** 대회 목록을 조회한다. 로그인 세션이 있으면 현재 사용자 권한 판단에 사용된다. */
 export async function getContests(
   accessToken?: string,
 ): Promise<ContestListItemResponseDto[]> {
@@ -36,7 +37,7 @@ export async function getContest(
   })
 }
 
-/** 현재 인증 사용자를 OPEN 대회 참가자로 등록한다. */
+/** 현재 인증 사용자의 대회 참가 또는 참가 승인 대기 신청을 처리한다. */
 export async function joinContest(
   accessToken: string,
   contestId: string,
@@ -45,6 +46,31 @@ export async function joinContest(
     accessToken,
     method: 'POST',
     path: `/api/v1/contests/${contestId}/join`,
+  })
+}
+
+/** 운영진이 승인 대기 중인 참가 신청 목록을 조회한다. */
+export async function getPendingContestParticipants(
+  accessToken: string,
+  contestId: string,
+): Promise<ContestPendingParticipantResponseDto[]> {
+  return requestJson<ContestPendingParticipantResponseDto[]>({
+    accessToken,
+    method: 'GET',
+    path: `/api/v1/contests/${contestId}/participants/pending`,
+  })
+}
+
+/** 운영진이 승인 대기 중인 참가 신청을 승인한다. */
+export async function approveContestParticipant(
+  accessToken: string,
+  contestId: string,
+  participantId: string,
+): Promise<ContestPendingParticipantResponseDto> {
+  return requestJson<ContestPendingParticipantResponseDto>({
+    accessToken,
+    method: 'POST',
+    path: `/api/v1/contests/${contestId}/participants/${participantId}/approve`,
   })
 }
 

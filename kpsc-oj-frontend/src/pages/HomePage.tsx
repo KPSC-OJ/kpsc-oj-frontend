@@ -1,5 +1,4 @@
 import { ArrowRight, ClipboardList, Code2, ShieldPlus } from 'lucide-react'
-import { Badge } from '../components/common/Badge'
 import { ButtonLink } from '../components/common/Button'
 import { Card } from '../components/common/Card'
 
@@ -7,8 +6,7 @@ export function HomePage() {
   return (
     <section className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-14">
       <div className="flex flex-col justify-center">
-        <Badge tone="blue">국민대학교 전용 Online Judge</Badge>
-        <h1 className="mt-4 text-4xl font-black text-slate-950 sm:text-5xl">
+        <h1 className="text-4xl font-black text-slate-950 sm:text-5xl">
           KPSC 문제 풀이 대시보드
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">

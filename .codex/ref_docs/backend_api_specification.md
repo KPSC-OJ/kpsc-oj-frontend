@@ -500,7 +500,7 @@
 - Contest API 상세 계약은 프론트 전달용 [docs/contest-api.md](../contest-api.md)를 기준으로 한다. 아래 항목은 `docs/api/endpoints.md`와 동일한 공개 endpoint set을 유지하기 위한 요약 명세다.
 
 ### GET /api/v1/contests
-- 설명: 조회 가능한 대회 목록을 반환한다. Authorization header가 있으면 PRIVATE 대회 표시 권한 판단에 사용한다.
+- 설명: 대회 목록을 반환한다. `PUBLIC`/`PRIVATE`는 조회 가능 여부가 아니라 참가 승인 정책을 의미한다.
 - 인증: public.
 - Request body: 없음.
 - Response body: array of object.
@@ -509,53 +509,77 @@
   - `description`: string, required.
   - `startTime`: string datetime, required, ISO-8601 한국 시간 offset `+09:00` 포함.
   - `endTime`: string datetime, required, ISO-8601 한국 시간 offset `+09:00` 포함.
-  - `status`: string, required, `DRAFT`, `SCHEDULED`, `RUNNING`, `ENDED`.
-  - `visibility`: string, required, `PUBLIC`, `PRIVATE`.
+  - `status`: string, required, 현재 시간 기준 자동 계산값. `SCHEDULED`, `RUNNING`, `ENDED`.
+  - `visibility`: string, required, `PUBLIC`, `PRIVATE`. `PUBLIC`은 참가 신청 즉시 승인, `PRIVATE`은 OWNER 또는 ADMIN 승인 필요.
 - Status codes: 200.
 
 ### GET /api/v1/contests/{contestId}
-- 설명: 대회 상세와 현재 사용자 기준 `isStaff`, `isParticipant` 권한 정보를 반환한다.
+- 설명: 대회 상세와 현재 사용자 기준 `isStaff`, `isParticipant` 권한 정보를 반환한다. 대회 기간과 참가 승인 여부와 무관하게 상세 정보는 조회할 수 있다.
 - 인증: public.
 - Path params: `contestId` string UUID.
 - Response body: `id`, `title`, `description`, `startTime`, `endTime`, `visibility`, `registrationMode`, `status`, `isStaff`, `isParticipant`.
-- Status codes: 200, 403, 404.
-- Error cases: `CONTEST_NOT_FOUND`, `CONTEST_FORBIDDEN`.
+- Status codes: 200, 404.
+- Error cases: `CONTEST_NOT_FOUND`.
 
 ### GET /api/v1/contests/{contestId}/problems
-- 설명: 대회 문제 목록과 현재 사용자 풀이 상태를 반환한다.
+- 설명: 대회 문제 목록과 현재 사용자 풀이 상태를 반환한다. 일반 사용자는 대회가 `RUNNING`일 때만 문제를 볼 수 있다. `PRIVATE` 대회는 승인된 참가자만 볼 수 있다. ContestStaff와 ADMIN은 기간과 무관하게 조회할 수 있다.
 - 인증: public.
 - Response body: array of `{id,label,title,score,displayOrder,solvedStatus}`.
 - `solvedStatus`: `NOT_SUBMITTED`, `ATTEMPTED`, `SOLVED`.
 - Status codes: 200, 403, 404.
 
 ### GET /api/v1/contests/{contestId}/problems/{contestProblemId}
-- 설명: 대회 문제 상세를 반환한다. HIDDEN testcase는 반환하지 않는다.
+- 설명: 대회 문제 상세를 반환한다. 문제 열람 권한은 문제 목록과 동일하다. 공개 예시 테스트 케이스와 서브테스크 메타데이터만 반환하며 HIDDEN testcase 본문은 반환하지 않는다.
 - 인증: public.
-- Response body: `id`, `label`, `title`, `statement`, `inputDescription`, `outputDescription`, `constraints`, `timeLimitMillis`, `memoryLimitKb`, `score`, `displayOrder`, `exampleTestCases`.
+- Response body: `id`, `label`, `title`, `statement`, `inputDescription`, `outputDescription`, `constraints`, `timeLimitMillis`, `memoryLimitKb`, `score`, `displayOrder`, `exampleTestCases`, `subtasks`.
 - `exampleTestCases[]`: `{caseOrder,input,output}`.
+- `subtasks[]`: `{order,title,score,prerequisiteSubtaskOrders,testCases}`. 서브테스크가 없으면 빈 배열.
+- `subtasks[].testCases[]`: `{order}`. HIDDEN testcase 입력/출력 본문은 포함하지 않음.
 - Status codes: 200, 403, 404.
 
 ### POST /api/v1/contests/{contestId}/join
-- 설명: OPEN 대회 참가를 처리한다. 이미 참가한 경우도 성공이다.
+- 설명: 대회 참가 신청을 처리한다. `PUBLIC` 대회는 즉시 `APPROVED` 참가자가 되고, `PRIVATE` 대회는 `PENDING` 참가 신청으로 저장된 뒤 OWNER 또는 ADMIN 승인이 필요하다. 이미 신청 또는 승인된 경우도 성공이다.
 - 인증: authenticated.
 - Request body: 없음.
-- Response body: `contestId`, `joined`.
+- Response body: `contestId`, `joined`, `participationStatus`.
+- `joined`: boolean, `APPROVED`이면 `true`, `PENDING`이면 `false`.
+- `participationStatus`: string, `PENDING` 또는 `APPROVED`.
 - Status codes: 200, 401, 403, 404.
 - Error cases: `CONTEST_FORBIDDEN`, `CONTEST_NOT_FOUND`.
 
+### GET /api/v1/contests/{contestId}/participants/pending
+- 설명: OWNER 또는 ADMIN이 승인 대기 중인 참가 신청 목록을 조회한다.
+- 인증: authenticated, Contest OWNER 또는 ADMIN.
+- Response body: array of `{participantId,userAccountId,serviceUsername,status,requestedAt}`. `requestedAt`은 한국 시간 offset `+09:00` 포함.
+- Status codes: 200, 401, 403, 404.
+- Error cases: `CONTEST_STAFF_REQUIRED`, `CONTEST_NOT_FOUND`.
+
+### POST /api/v1/contests/{contestId}/participants/{participantId}/approve
+- 설명: OWNER 또는 ADMIN이 참가 신청을 승인해 해당 사용자를 대회 참가자로 만든다.
+- 인증: authenticated, Contest OWNER 또는 ADMIN.
+- Request body: 없음.
+- Response body: `{participantId,userAccountId,serviceUsername,status,requestedAt}`. 승인 후 `status=APPROVED`.
+- Status codes: 200, 401, 403, 404.
+- Error cases: `CONTEST_STAFF_REQUIRED`, `CONTEST_NOT_FOUND`, `CONTEST_PARTICIPANT_NOT_FOUND`.
+
 ### POST /api/v1/contests/{contestId}/problems
-- 설명: ContestStaff 또는 ADMIN이 대회 문제와 테스트 케이스를 생성한다.
+- 설명: ContestStaff 또는 ADMIN이 대회 문제, 선택 checker code, 필수 예시 정답 코드, 선택 서브테스크와 테스트 케이스를 생성한다. 저장 전 예시 정답 코드를 HIDDEN 테스트 케이스 전체로 사전 채점하며, 성공한 경우에만 backing `Problem`과 ContestProblem을 저장한다.
 - 인증: authenticated, ContestStaff 또는 ADMIN.
-- Request body: `label`, `title`, `statement`, `inputDescription`, `outputDescription`, `constraints`, `timeLimitMillis`, `memoryLimitKb`, `score`, `displayOrder`, `testCases`.
-- `testCases[]`: `{caseOrder,kind,inputText,outputText}`, `kind`는 `EXAMPLE` 또는 `HIDDEN`, 최소 1개 HIDDEN 필요.
+- Request body: `label`, `title`, `statement`, `inputDescription`, `outputDescription`, `constraints`, `timeLimitMillis`, `memoryLimitKb`, `score`, `displayOrder`, `testCases`, `checkerCode`, `referenceSolutionCode`, `subtasks`.
+- `checkerCode`: string, optional, testlib 기반 C++17 checker code. 없거나 null이면 judge 기본 출력 비교를 사용한다. 제공 시 빈 문자열 또는 공백 문자열 불가.
+- `referenceSolutionCode`: string, required, C++17 예시 정답 코드. 생성 전에 HIDDEN 테스트 케이스 전체로 judge 사전 채점을 수행하며 저장하지 않는다.
+- `testCases[]`: `{caseOrder,kind,inputText,outputText}`, `kind`는 `EXAMPLE` 또는 `HIDDEN`. 서브테스크가 없으면 최소 1개 HIDDEN 필요. 서브테스크가 있으면 HIDDEN은 `subtasks[].testCases`로만 제공하고 `testCases`에는 EXAMPLE만 포함한다.
+- `subtasks[]`: optional, `{order,title,score,prerequisiteSubtaskOrders,testCases}`. 제공 시 score 합은 100이어야 하며 order는 중복될 수 없다.
+- `subtasks[].prerequisiteSubtaskOrders`: number array, optional, 같은 문제 안에서 먼저 `PASSED`여야 하는 서브테스크 order 목록. 자기 자신, 존재하지 않는 order, 순환 dependency는 허용하지 않음.
+- `subtasks[].testCases[]`: `{input,output}`, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크의 실제 채점용 HIDDEN 테스트 케이스.
 - Response body: `id`, `contestId`, `label`, `title`, `score`, `displayOrder`, `exampleTestCaseCount`, `hiddenTestCaseCount`.
-- Status codes: 201, 400, 401, 403, 404.
-- Error cases: `VALIDATION_ERROR`, `CONTEST_STAFF_REQUIRED`, `CONTEST_NOT_FOUND`.
+- Status codes: 201, 400, 401, 403, 404, 503.
+- Error cases: `VALIDATION_ERROR`, `CONTEST_STAFF_REQUIRED`, `CONTEST_NOT_FOUND`, `PROBLEM_VERIFICATION_FAILED`, `JUDGE_UNAVAILABLE`.
 
 ### PATCH /api/v1/contests/{contestId}/problems/{contestProblemId}
-- 설명: ContestStaff 또는 ADMIN이 대회 문제 기본 정보와 테스트 케이스 set을 교체한다.
+- 설명: ContestStaff 또는 ADMIN이 대회 문제 기본 정보, 선택 checker code, 선택 서브테스크와 테스트 케이스 set을 교체한다. 수정 시 예시 정답 코드 사전 채점은 수행하지 않는다.
 - 인증: authenticated, ContestStaff 또는 ADMIN.
-- Request/Response body: `POST /api/v1/contests/{contestId}/problems`와 동일.
+- Request/Response body: `POST /api/v1/contests/{contestId}/problems`와 거의 동일하되 `referenceSolutionCode`는 받지 않는다. 기존 testcase/subtask set은 요청 내용으로 교체된다.
 - Status codes: 200, 400, 401, 403, 404.
 - Error cases: `VALIDATION_ERROR`, `CONTEST_STAFF_REQUIRED`, `CONTEST_PROBLEM_NOT_FOUND`.
 
@@ -566,14 +590,14 @@
 - Status codes: 204, 401, 403, 404.
 
 ### POST /api/v1/contests/{contestId}/problems/{contestProblemId}/submissions
-- 설명: 대회 문제 제출을 `QUEUED` 상태로 생성하고 기존 judge queue가 처리하게 한다.
+- 설명: 대회 문제 제출을 `QUEUED` 상태로 생성하고 기존 judge queue가 처리하게 한다. 저장 시 `problem_id`에는 ContestProblem의 backing `Problem`을, `contest_id`에는 대회, `contest_problem_id`에는 대회 내 문제 슬롯을 저장한다.
 - 인증: authenticated.
 - Request body:
   - `language`: string, required, `cpp17` 또는 `python3`.
   - `sourceCode`: string, required, 빈 문자열 불가, 최대 10000자.
 - Response body: `id`, `contestId`, `contestProblemId`, `problemLabel`, `language`, `status`, `submittedAt`. `submittedAt`은 한국 시간 offset `+09:00` 포함.
 - Status codes: 201, 400, 401, 403, 404.
-- Error cases: `CONTEST_NOT_RUNNING`, `CONTEST_NOT_JOINED`, `CONTEST_PROBLEM_NOT_FOUND`, `VALIDATION_ERROR`, `UNSUPPORTED_LANGUAGE`.
+- Error cases: `CONTEST_NOT_RUNNING`, `CONTEST_NOT_JOINED`, `CONTEST_PROBLEM_NOT_FOUND`, `VALIDATION_ERROR`, `UNSUPPORTED_LANGUAGE`. `PRIVATE` 대회에서 승인되지 않은 사용자는 `CONTEST_NOT_JOINED`.
 
 ### GET /api/v1/contests/{contestId}/submissions/me
 - 설명: 인증 사용자의 해당 대회 제출 목록을 최신순으로 반환한다.
@@ -797,7 +821,8 @@
 - Google token audience는 `GOOGLE_OAUTH_CLIENT_ID` 환경 변수로 설정한다.
 - `POST /api/v1/submissions`는 judge를 직접 호출하지 않는다. 제출을 `QUEUED`로 저장하고 백그라운드 processor가 `GET /api/v1/judge-status`로 idle 상태를 확인한 뒤 가장 오래된 제출 하나를 `RUNNING`으로 전환해 `POST /api/v1/judge-attempts`를 호출한다. status endpoint가 404 또는 405를 반환하는 judge 버전에서는 백엔드의 단일 queue processor lock으로 중복 실행을 막고 가장 오래된 제출 하나를 진행한다.
 - `POST /api/v1/problems`는 문제 row를 저장하기 전에 `referenceSolutionCode`를 `language=cpp17`, `problem_id=null`, `checker_code=checkerCode`, HIDDEN 테스트 케이스, 문제 시간/메모리 제한과 함께 `POST /api/v1/judge-attempts`로 동기 사전 채점한다. 서브테스크 문제는 `subtasks[].testCases`를 HIDDEN 테스트 케이스로 flatten해서 전달한다. judge 결과가 `completed`이고 전체 실제 채점 테스트 케이스 수와 통과 수가 일치할 때만 문제를 저장한다.
-- judge 요청에는 `problem_id=problems.id`, 제출 언어, 제출 소스 코드, `problems.checker_code`, HIDDEN 테스트 케이스, 문제 시간/메모리 제한을 전달한다.
+- `POST /api/v1/contests/{contestId}/problems`도 backing `Problem` 저장 전에 `referenceSolutionCode`를 `language=cpp17`, `problem_id=null`, `checker_code=checkerCode`, 대회 문제 HIDDEN 테스트 케이스, 대회 문제 시간/메모리 제한과 함께 `POST /api/v1/judge-attempts`로 동기 사전 채점한다. 서브테스크가 있으면 `subtasks[].testCases`를 HIDDEN 테스트 케이스로 flatten해서 전달한다.
+- 일반 문제 judge 요청에는 `problem_id=problems.id`, 제출 언어, 제출 소스 코드, `problems.checker_code`, HIDDEN 테스트 케이스, 문제 시간/메모리 제한을 전달한다. Contest 제출 judge 요청에는 `problem_id=submissions.problem_id`, 제출 언어, 제출 소스 코드, backing `Problem`의 checker code와 HIDDEN 테스트 케이스, ContestProblem의 시간/메모리 제한 값을 전달한다.
 - judge status 조회가 연결 실패, 인증 실패, 5xx 등으로 실패하면 제출은 `QUEUED`로 유지해 다음 poll에서 재시도한다. status endpoint 미지원(404 또는 405)은 compatibility fallback으로 처리해 한 제출을 진행한다. 채점 요청 실패 또는 응답 매핑 실패 시 해당 제출은 `JUDGE_ERROR`로 종료한다.
 - judge result mapping:
   - `completed` -> `ACCEPTED`.
@@ -806,7 +831,7 @@
   - `failed_test_case` -> 첫 실패 테스트 케이스 상태에 따라 `WRONG_ANSWER`, `RUNTIME_ERROR`, `TIME_LIMIT_EXCEEDED`, `MEMORY_LIMIT_EXCEEDED`.
 - subtask scoring:
   - judge는 테스트 케이스 단위 결과만 반환하고 서브테스크 점수 계산을 하지 않는다.
-  - 백엔드는 EXAMPLE 테스트 케이스를 제외하고 HIDDEN 테스트 케이스 결과를 `problem_test_cases.subtask_id` 기준으로 그룹화한다.
+  - 백엔드는 일반 제출과 Contest 제출 모두 EXAMPLE 테스트 케이스를 제외하고 backing `problem_test_cases.subtask_id` 기준으로 HIDDEN 테스트 케이스 결과를 그룹화한다.
   - 한 서브테스크의 모든 HIDDEN 테스트 케이스가 `passed`이고 `problem_subtask_prerequisites`에 정의된 모든 선행 서브테스크가 실제 `PASSED`이면 해당 `problem_subtasks.score`를 획득한다.
   - 자기 HIDDEN 테스트 케이스 중 하나라도 실패하거나 결과가 누락되면 서브테스크 결과는 `FAILED`이고 0점을 획득한다.
   - 자기 HIDDEN 테스트 케이스는 모두 통과했지만 선행 서브테스크가 `FAILED` 또는 `BLOCKED`이면 서브테스크 결과는 `BLOCKED`이고 0점을 획득한다.

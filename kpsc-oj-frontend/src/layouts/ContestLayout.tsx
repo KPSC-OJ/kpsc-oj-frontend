@@ -1,9 +1,9 @@
 import { useState, type ReactElement } from 'react'
 import { Outlet, useParams } from 'react-router-dom'
-import { Card } from '../components/common/Card'
-import { ContestNavigation } from '../components/contest/ContestNavigation'
 import { ContestStatusBadge, ContestVisibilityBadge } from '../components/contest/ContestBadges'
+import { SiteFooter } from '../components/layout/SiteFooter'
 import { useContest } from '../hooks/useContestData'
+import { ContestSiteHeader } from './ContestSiteHeader'
 
 export function ContestLayout(): ReactElement {
   const { contestId } = useParams()
@@ -12,53 +12,71 @@ export function ContestLayout(): ReactElement {
 
   if (isLoading) {
     return (
-      <Card>
-        <p className="text-sm font-semibold text-slate-500">대회 정보를 불러오는 중입니다.</p>
-      </Card>
+      <div className="flex min-h-screen flex-col bg-slate-50 text-slate-950">
+        <ContestSiteHeader contestId={contestId} />
+        <main className="flex flex-1 items-center justify-center px-4 py-12">
+          <p className="text-sm font-semibold text-slate-500">대회 정보를 불러오는 중입니다.</p>
+        </main>
+        <SiteFooter />
+      </div>
     )
   }
 
   if (!contest || !contestId) {
     return (
-      <Card>
-        <h1 className="text-xl font-black text-slate-950">
-          {errorMessage ?? '대회를 찾을 수 없습니다.'}
-        </h1>
-      </Card>
+      <div className="flex min-h-screen flex-col bg-slate-50 text-slate-950">
+        <ContestSiteHeader contestId={contestId} />
+        <main className="flex flex-1 items-center justify-center px-4 py-12">
+          <h1 className="text-xl font-black text-slate-950">
+            {errorMessage ?? '대회를 찾을 수 없습니다.'}
+          </h1>
+        </main>
+        <SiteFooter />
+      </div>
     )
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 bg-slate-950 px-5 py-5 text-white">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-3 flex flex-wrap gap-2">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-950">
+      <ContestSiteHeader contestId={contestId} />
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mb-5 flex justify-end">
+            <div className="flex flex-wrap gap-2">
               <ContestStatusBadge status={contest.status} />
               <ContestVisibilityBadge visibility={contest.visibility} />
             </div>
-            <p className="text-xs font-black uppercase text-blue-200">Contest</p>
-            <h1 className="mt-1 text-2xl font-black">{contest.title}</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-              {contest.description}
-            </p>
           </div>
-          <dl className="grid gap-2 text-sm font-semibold text-slate-200 sm:grid-cols-2">
+
+          <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
             <div>
-              <dt className="text-xs uppercase text-slate-400">Start</dt>
-              <dd>{contest.startTime}</dd>
+              <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                {contest.title}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+                {contest.description}
+              </p>
             </div>
-            <div>
-              <dt className="text-xs uppercase text-slate-400">End</dt>
-              <dd>{contest.endTime}</dd>
+
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-5">
+              <div className="text-xs font-black text-blue-700">대회 시간</div>
+              <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-xs font-bold text-slate-500">시작</dt>
+                  <dd className="mt-1 font-black text-slate-950">{contest.startTime}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold text-slate-500">종료</dt>
+                  <dd className="mt-1 font-black text-slate-950">{contest.endTime}</dd>
+                </div>
+              </dl>
             </div>
-          </dl>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <ContestNavigation contestId={contestId} isStaff={contest.isStaff} />
-
-      <div className="bg-slate-50 p-4 sm:p-5">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Outlet
           context={{
             contest,
@@ -66,7 +84,9 @@ export function ContestLayout(): ReactElement {
             refreshContest: () => setRefreshKey((currentRefreshKey) => currentRefreshKey + 1),
           }}
         />
-      </div>
-    </section>
+      </main>
+
+      <SiteFooter />
+    </div>
   )
 }

@@ -15,10 +15,10 @@ export function ContestScoreboardPage(): ReactElement {
     <div className="grid gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-black text-blue-600">Scoreboard</p>
+          <p className="text-sm font-black text-blue-600">스코어보드</p>
           <h2 className="text-xl font-black text-slate-950">대회 스코어보드</h2>
           <p className="mt-1 text-sm text-slate-500">
-            ICPC 스타일 순위, penalty, 문제별 attempts를 표시합니다.
+            ICPC 스타일 순위, 패널티, 문제별 시도 횟수를 표시합니다.
           </p>
         </div>
         <Button

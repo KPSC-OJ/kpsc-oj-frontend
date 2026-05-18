@@ -2,7 +2,7 @@
 
 ## 요약
 kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
-현재 구현은 인증, 문제 목록, 문제 상세/서브테스크 메타데이터, 문제 생성/수정, 제출 생성, 제출 상세/채점 결과, 내 제출 목록, Contest 목록/홈/문제/제출/스코어보드/운영진 문제 관리 화면에서 백엔드 REST API를 호출한다.
+현재 구현은 인증, 문제 목록, 문제 상세/서브테스크 메타데이터, 문제 생성/수정, 제출 생성, 제출 상세/채점 결과, 내 제출 목록, Contest 목록/홈/참가 신청/참가 승인/문제/제출/스코어보드/운영진 문제 관리 화면에서 백엔드 REST API를 호출한다.
 일반 문제 제출 화면과 대회 문제 제출 화면은 Footer와 AppLayout 사이드바 없이 viewport 전체 높이를 사용하는 workspace layout을 사용한다.
 백엔드 연결을 위해 화면 조립, UI 컴포넌트, service, 상태 저장소 경계를 분리한다.
 
@@ -12,8 +12,8 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 - 데이터베이스: 프론트엔드 직접 사용 없음
 - 인증 사용: Google ID token 기반 백엔드 로그인, signup, token refresh, logout, session role 연동
 - 문제/제출 사용: authenticated backend API 연동. 문제 상세는 서브테스크 메타데이터를 포함하고, 제출 상세는 서브테스크별 결과를 표시한다.
-- Contest 사용: public 조회 가능한 Contest REST API 연동. 로그인 세션이 있으면 GET 요청에도 Authorization header를 붙여 PRIVATE 접근과 `isStaff`/`isParticipant` 권한 정보를 정확히 받는다.
-- 테마 사용: 사용자 선택 라이트/다크 모드를 localStorage에 저장하고 전역 `data-theme` 속성으로 반영
+- Contest 사용: public 조회 가능한 Contest REST API 연동. 로그인 세션이 있으면 GET 요청에도 Authorization header를 붙여 `isStaff`/`isParticipant` 권한 정보를 정확히 받는다. `visibility`는 참가 즉시 승인/승인 필요 정책으로 표시하고, 대회 목록은 카드형 리스트에서 대회를 선택해 일반 앱 사이드바가 없는 대회 전용 페이지로 진입한다.
+- 테마 사용: 사용자 선택 라이트/다크 모드를 localStorage에 저장하고 전역 `data-theme` 속성으로 반영. 다크 모드는 blue/slate 기반 대신 black/zinc 배경과 violet accent를 사용한다.
 - 관리자 문제 생성: `ADMIN` role 세션에만 화면 노출, backend problem creation API 연동
 - 문제 수정: 문제 목록 응답의 생성자 정보로 본인이 출제한 문제에만 수정 진입 노출, backend problem definition API에서 생성자 권한 최종 검증
 - 외부 API 연동: Google Identity Services script, kpsc-oj-backend auth API
@@ -32,7 +32,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 
 ## React 아키텍처 메모
 - page는 라우팅 단위 화면 조립을 담당한다.
-- layout은 Public, App, Contest, Contest Problem Workspace, Problem Workspace 화면 경계를 담당한다. Public/App은 공통 Header/Footer를 사용하고, Contest는 대회별 전용 내비게이션을 제공하며, Contest Problem Workspace와 Problem Workspace는 화면 높이를 editor에 배정하기 위해 Footer 없이 Header 중심으로 구성한다.
+- layout은 Public, App, Contest, Contest Problem Workspace, Problem Workspace 화면 경계를 담당한다. Public/App은 공통 Header/Footer를 사용하고, Contest는 App sidebar 없이 공통 Header/Footer를 사용하되 Header 중앙에 대회별 홈/문제/제출/스코어보드 탭을 제공하며, Contest Problem Workspace와 Problem Workspace는 화면 높이를 editor에 배정하기 위해 Footer 없이 Header 중심으로 구성한다.
 - component는 재사용 가능한 UI와 표시 책임을 담당한다.
 - service는 API 호출과 공통 오류 정규화를 담당한다.
 - store는 인증 session, session role, signup pending 상태, theme mode, localStorage persistence를 담당한다.
@@ -42,7 +42,7 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 ## 흐름 메모
 - 문제 데이터 흐름: Page -> Hook -> Problem service -> Backend API. 문제 상세/정의 응답의 `subtasks`와 `prerequisiteSubtaskOrders`는 hook에서 UI view model로 변환한다.
 - 제출 데이터 흐름: Page -> Hook -> Submission service -> Backend API. 제출 생성 후 상세 결과는 `useSubmissionDetail`이 조회하고 진행 중 상태에서는 polling하며, `totalScore`와 `subtaskResults`를 결과 패널에 표시한다.
-- Contest 데이터 흐름: Page -> Contest hook -> Contest service -> Backend API. Contest DTO는 `src/types/contestApi.ts`, 화면 모델은 `src/types/contest.ts`로 분리한다. ContestProblem은 일반 Problem과 다른 타입으로 취급한다.
+- Contest 데이터 흐름: Page -> Contest hook -> Contest service -> Backend API. Contest DTO는 `src/types/contestApi.ts`, 화면 모델은 `src/types/contest.ts`로 분리한다. 참가 신청 결과와 승인 대기 참가자도 hook에서 화면 모델로 변환한다. ContestProblem은 일반 Problem과 다른 타입으로 취급하며, 생성/수정 폼의 checker, reference solution, subtask 입력은 hook에서 ContestProblem mutation DTO로 변환한다.
 - 인증 흐름: Google Identity Services 버튼 -> LoginPage -> Auth store -> Auth service -> Backend auth API -> 기존 사용자 세션 저장 또는 최초 로그인 회원가입 대기 -> signup 완료 후 세션 저장
 - 테마 흐름: SiteHeader ThemeModeToggle -> Theme store -> localStorage 저장 -> document `data-theme`와 Monaco editor theme 반영
 - API 흐름: Page -> Hook/Store -> Service -> Backend API
@@ -55,13 +55,13 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | `/` | PublicLayout | HomePage | 공개 홈 대시보드 |
 | `/login` | PublicLayout | LoginPage | Google ID token 기반 로그인과 signup |
 | `/contests` | AppLayout | ContestsPage | 공개/권한 기반 대회 목록 |
-| `/contests/:contestId` | AppLayout + ContestLayout | ContestHomePage | 대회 홈, 참가 상태, 문제 요약, 스코어보드 미리보기 |
-| `/contests/:contestId/problems` | AppLayout + ContestLayout | ContestProblemsPage | 대회 전용 문제 목록과 운영진 관리 액션 |
+| `/contests/:contestId` | ContestLayout | ContestHomePage | 대회 홈, 참가 상태, 참가 승인 대기 목록, 문제 요약, 스코어보드 미리보기 |
+| `/contests/:contestId/problems` | ContestLayout | ContestProblemsPage | 대회 전용 문제 목록과 운영진 관리 액션 |
 | `/contests/:contestId/problems/:contestProblemId` | ContestProblemWorkspaceLayout | ContestProblemDetailPage | 대회 문제 상세와 대회 제출 workspace |
-| `/contests/:contestId/submissions` | AppLayout + ContestLayout | ContestSubmissionsPage | 내 대회 제출, 운영진이면 전체 제출 조회 |
-| `/contests/:contestId/scoreboard` | AppLayout + ContestLayout | ContestScoreboardPage | ICPC 스타일 대회 스코어보드 |
-| `/contests/:contestId/manage/problems/new` | AppLayout + ContestLayout | ContestProblemNewPage | `isStaff=true` 사용자만 사용하는 대회 문제 생성 폼 |
-| `/contests/:contestId/manage/problems/:contestProblemId/edit` | AppLayout + ContestLayout | ContestProblemEditPage | `isStaff=true` 사용자만 사용하는 대회 문제 수정/삭제 폼 |
+| `/contests/:contestId/submissions` | ContestLayout | ContestSubmissionsPage | 내 대회 제출, 운영진이면 전체 제출 조회 |
+| `/contests/:contestId/scoreboard` | ContestLayout | ContestScoreboardPage | ICPC 스타일 대회 스코어보드 |
+| `/contests/:contestId/manage/problems/new` | ContestLayout | ContestProblemNewPage | `isStaff=true` 사용자만 사용하는 대회 문제 생성 폼 |
+| `/contests/:contestId/manage/problems/:contestProblemId/edit` | ContestLayout | ContestProblemEditPage | `isStaff=true` 사용자만 사용하는 대회 문제 수정/삭제 폼 |
 | `/problems` | AppLayout + ProtectedRoute | ProblemsPage | 인증된 문제 목록 |
 | `/problems/:id` | AppLayout | Redirect | `/problems/:id/submit`으로 즉시 이동 |
 | `/problems/:id/submit` | ProblemWorkspaceLayout + ProtectedRoute | SubmitPage | 인증된 제출 작업 화면 |
@@ -101,3 +101,11 @@ kpsc-oj-frontend는 KPSC Online Judge의 React 프론트엔드 MVP다.
 | 2026-05-14 | 서브테스크 선행 관계는 문제 정의 폼에서 입력한다. | 백엔드 문제 생성/수정 계약에 `subtasks[].prerequisiteSubtaskOrders`가 추가되어 서브테스크 점수 획득 조건을 표현해야 한다. | `ProblemDefinitionForm`은 선행 order 입력을 검증해 request DTO로 변환하고, `SubmitPage`는 문제 상세의 선행 order 메타데이터를 표시한다. |
 | 2026-05-15 | Contest 페이지는 일반 Problem 흐름과 분리된 Contest 전용 타입, service, hook, layout을 사용한다. | ContestProblem, ContestParticipant, Scoreboard는 일반 문제/제출 계약과 필드 및 권한이 다르기 때문이다. | Contest home/list/manage 라우트는 `ContestLayout`과 `contestService`를 사용하고, 운영진 UI는 `GET /api/v1/contests/{contestId}`의 `isStaff`를 기준으로 표시한다. |
 | 2026-05-17 | 대회 문제 상세/제출 화면은 ContestProblemWorkspaceLayout으로 분리한다. | 대회 제출도 일반 문제 제출처럼 문제 지문과 코드 editor를 동시에 크게 사용해야 한다. | `/contests/:contestId/problems/:contestProblemId` 라우트는 AppLayout의 max-width, sidebar, Footer 제약을 벗어나고, ContestProblemDetailPage 내부 패널만 스크롤한다. |
+| 2026-05-18 | 대회 상세/문제/제출/스코어보드/관리 화면을 AppLayout 밖의 ContestLayout 전용 페이지로 분리한다. | 대회 목록에서 대회를 선택하면 일반 OJ 사이드바가 아닌 대회 전용 페이지가 열려야 한다는 UI 요구사항을 반영하기 위함. | `/contests/:contestId` 계열 라우트는 공통 Header/Footer와 Header 중앙 대회 탭을 사용하며, `/contests` 목록은 AppLayout 안의 카드형 리스트로 유지한다. |
+| 2026-05-19 | 대회 전용 페이지 Header는 일반 OJ 내비게이션 대신 대회 탭과 OJ 복귀 버튼을 표시한다. | 대회 페이지에서 홈/문제/제출/스코어보드 이동을 Header 안에서 바로 제공해야 한다. | `ContestSiteHeader`가 `SiteHeader`에 `ContestNavigation`을 주입하고 `OJ로 돌아가기` 버튼을 표시한다. |
+| 2026-05-19 | 다크 테마는 black/zinc 배경과 violet accent를 사용한다. | `kpsc_oj_dark_mode_demo.html`의 색감 요구사항을 반영해 남색 계열의 어두운 테마를 피하기 위함. | `src/index.css`의 `data-theme="dark"` override가 page/card/line/text/accent 색상을 black/zinc/violet 계열로 매핑한다. |
+| 2026-05-19 | 대회 전용 페이지 Header는 기본 OJ 내비게이션 대신 대회 탭과 `OJ로 돌아가기` 버튼을 표시한다. | 대회 내부 이동은 홈/문제/제출/스코어보드 중심으로 유지하고, 일반 OJ 화면 복귀 동선을 Header에서 제공하기 위함. | `ContestSiteHeader`가 `SiteHeader`에 대회 전용 `ContestNavigation`과 `/contests` 복귀 버튼을 주입한다. |
+| 2026-05-19 | 대회 문제 제출 workspace의 별도 대회 요약 바를 제거한다. | Header에 이미 대회 탭과 복귀 동선이 있어 검은색 요약 바가 현재 대회를 중복 표시하기 때문이다. | `ContestProblemWorkspaceLayout`은 `ContestSiteHeader` 다음에 바로 제출 workspace main을 렌더링한다. |
+| 2026-05-19 | 일반 제출과 대회 제출 workspace의 문제/코드 영역 분할 비율을 사용자가 조절할 수 있게 한다. | 문제 지문을 더 크게 보거나 코드 editor를 넓게 쓰는 풀이 상황을 지원하기 위함. | `ResizableSplitPane`이 pointer drag와 keyboard resize 상태를 소유하고, `SubmitPage`와 `ContestProblemDetailPage`가 이를 공유한다. |
+| 2026-05-19 | 대회 문제 생성/수정 폼은 백엔드 ContestProblem checker/reference solution/subtask 계약을 따른다. | 백엔드가 대회 문제 생성 전 예시 정답 코드 사전 채점과 서브테스크 flatten 채점을 추가했기 때문이다. | `useContestProblem`은 대회 문제 상세의 서브테스크 메타데이터를 view model로 변환한다. `ContestProblemForm`은 생성 시 `referenceSolutionCode`를 필수로 받고, `useContestData`는 생성 요청에만 이를 포함하며 수정 요청에는 제외한다. 서브테스크 사용 시 일반 HIDDEN 대신 `subtasks[].testCases`를 전송한다. |
+| 2026-05-19 | 대회 `PUBLIC`/`PRIVATE`는 참가 승인 정책으로 표시하고, 참가 승인 대기 UI를 대회 홈에 둔다. | 백엔드 Contest 참가 계약이 즉시 승인과 운영진 승인 대기 상태를 구분하도록 변경되었기 때문이다. | `ContestHomePage`는 join 응답의 `participationStatus`를 안내하고, 운영진이면 pending participants API와 approve API를 통해 승인 대기 참가자를 관리한다. |

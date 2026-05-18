@@ -24,7 +24,7 @@ function formatCell(cell: ContestScoreboardCell | undefined): string {
     return `${cell.attempts} / ${cell.penalty ?? 0}`
   }
 
-  return `${cell.attempts} try`
+  return `${cell.attempts}회 시도`
 }
 
 export function ContestScoreboardTable({
@@ -38,13 +38,13 @@ export function ContestScoreboardTable({
         <thead className="bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
             <th className="sticky left-0 z-20 border-b border-slate-200 bg-slate-50 px-4 py-3">
-              Rank
+              순위
             </th>
             <th className="sticky left-[72px] z-20 min-w-48 border-b border-slate-200 bg-slate-50 px-4 py-3">
-              User
+              사용자
             </th>
-            <th className="border-b border-slate-200 px-4 py-3 text-center">Solved</th>
-            <th className="border-b border-slate-200 px-4 py-3 text-center">Penalty</th>
+            <th className="border-b border-slate-200 px-4 py-3 text-center">해결</th>
+            <th className="border-b border-slate-200 px-4 py-3 text-center">패널티</th>
             {scoreboard.problems.map((problem) => (
               <th
                 className="min-w-24 border-b border-slate-200 px-4 py-3 text-center"
@@ -89,7 +89,7 @@ export function ContestScoreboardTable({
                     >
                       {formatCell(cell)}
                       {cell?.firstSolved ? (
-                        <div className="mt-0.5 text-[10px] uppercase">First</div>
+                        <div className="mt-0.5 text-[10px]">최초 해결</div>
                       ) : null}
                     </div>
                   </td>

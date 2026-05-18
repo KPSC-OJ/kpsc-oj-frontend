@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { Link } from 'react-router-dom'
-import { ListPlus, UserCheck } from 'lucide-react'
+import { CheckCircle2, Clock3, ListPlus, ShieldCheck, UserCheck, Users } from 'lucide-react'
 import { Button, ButtonLink } from '../components/common/Button'
 import { Card } from '../components/common/Card'
 import { ContestProblemStatusBadge } from '../components/contest/ContestBadges'
@@ -9,10 +9,33 @@ import { getContestErrorMessage } from '../hooks/contestErrorMessage'
 import { useContestLayoutContext } from '../layouts/contestLayoutContext'
 import { useAuth } from '../stores/useAuth'
 import {
+  useContestParticipantApprovals,
   useContestProblems,
   useContestScoreboard,
   useJoinContest,
+  usePendingContestParticipants,
 } from '../hooks/useContestData'
+import type { ContestDetail } from '../types/contest'
+
+function getContestJoinPolicyText(contest: ContestDetail): string {
+  if (contest.registrationMode === 'STAFF_ONLY') {
+    return '운영진 전용'
+  }
+
+  if (contest.visibility === 'PRIVATE') {
+    return '승인 필요'
+  }
+
+  return '즉시 승인'
+}
+
+function getJoinButtonLabel(contest: ContestDetail): string {
+  if (contest.visibility === 'PRIVATE') {
+    return '참가 신청'
+  }
+
+  return '참가하기'
+}
 
 export function ContestHomePage(): ReactElement {
   const { contest, contestId, refreshContest } = useContestLayoutContext()
@@ -20,15 +43,32 @@ export function ContestHomePage(): ReactElement {
   const { problems } = useContestProblems(contestId)
   const { scoreboard } = useContestScoreboard(contestId)
   const { joinContestWithCurrentSession } = useJoinContest()
+  const { approveParticipantWithCurrentSession } = useContestParticipantApprovals()
+  const [participantRefreshKey, setParticipantRefreshKey] = useState(0)
+  const {
+    errorMessage: pendingParticipantsErrorMessage,
+    isLoading: isPendingParticipantsLoading,
+    participants: pendingParticipants,
+  } = usePendingContestParticipants(contestId, contest.isStaff, participantRefreshKey)
+  const [approvalErrorMessage, setApprovalErrorMessage] = useState<string | null>(null)
+  const [approvingParticipantId, setApprovingParticipantId] = useState<string | null>(null)
   const [joinErrorMessage, setJoinErrorMessage] = useState<string | null>(null)
+  const [joinNoticeMessage, setJoinNoticeMessage] = useState<string | null>(null)
   const [isJoining, setIsJoining] = useState(false)
 
   async function joinCurrentContest(): Promise<void> {
     setIsJoining(true)
     setJoinErrorMessage(null)
+    setJoinNoticeMessage(null)
 
     try {
-      await joinContestWithCurrentSession(contestId)
+      const joinResult = await joinContestWithCurrentSession(contestId)
+
+      setJoinNoticeMessage(
+        joinResult.participationStatus === 'PENDING'
+          ? '참가 신청이 접수되었습니다. 운영진 승인 후 문제를 풀 수 있습니다.'
+          : '대회 참가가 완료되었습니다.',
+      )
       refreshContest()
     } catch (error) {
       setJoinErrorMessage(getContestErrorMessage(error, '대회 참가 요청을 처리하지 못했습니다.'))
@@ -37,6 +77,23 @@ export function ContestHomePage(): ReactElement {
     }
   }
 
+  async function approveParticipant(participantId: string): Promise<void> {
+    setApprovingParticipantId(participantId)
+    setApprovalErrorMessage(null)
+
+    try {
+      await approveParticipantWithCurrentSession(contestId, participantId)
+      setParticipantRefreshKey((currentRefreshKey) => currentRefreshKey + 1)
+    } catch (error) {
+      setApprovalErrorMessage(
+        getContestErrorMessage(error, '참가 신청을 승인하지 못했습니다.'),
+      )
+    } finally {
+      setApprovingParticipantId(null)
+    }
+  }
+
+  const canRequestParticipation = contest.registrationMode === 'OPEN' || contest.isStaff
   const previewScoreboard = scoreboard
     ? {
         ...scoreboard,
@@ -51,12 +108,17 @@ export function ContestHomePage(): ReactElement {
           {joinErrorMessage}
         </div>
       ) : null}
+      {joinNoticeMessage ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          {joinNoticeMessage}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <Card>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-sm font-black text-blue-600">Contest Home</p>
+              <p className="text-sm font-black text-blue-600">대회 홈</p>
               <h2 className="mt-1 text-xl font-black text-slate-950">{contest.title}</h2>
             </div>
             {contest.isStaff ? (
@@ -88,14 +150,18 @@ export function ContestHomePage(): ReactElement {
             {contest.isParticipant ? '참가 중' : '아직 참가하지 않음'}
           </p>
           <p className="mt-1 text-xs font-semibold text-slate-500">
-            {contest.registrationMode === 'OPEN' ? 'OPEN' : 'STAFF_ONLY'}
+            참가 정책: {getContestJoinPolicyText(contest)}
           </p>
           <div className="mt-5">
             {contest.isParticipant ? (
               <ButtonLink to={`/contests/${contestId}/problems`}>문제 풀기</ButtonLink>
+            ) : !canRequestParticipation ? (
+              <p className="text-sm font-semibold text-slate-500">
+                운영진만 참가할 수 있는 대회입니다.
+              </p>
             ) : isAuthenticated ? (
               <Button disabled={isJoining} onClick={() => void joinCurrentContest()} type="button">
-                {isJoining ? '참가 중' : '참가하기'}
+                {isJoining ? '처리 중' : getJoinButtonLabel(contest)}
               </Button>
             ) : (
               <ButtonLink to="/login">로그인 후 참가</ButtonLink>
@@ -103,6 +169,80 @@ export function ContestHomePage(): ReactElement {
           </div>
         </Card>
       </div>
+
+      {contest.isStaff ? (
+        <Card>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-md bg-blue-50 p-2 text-blue-600">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-slate-950">참가 승인 대기</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  승인 필요 대회의 참가 신청을 확인하고 승인합니다.
+                </p>
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm font-black text-slate-700">
+              <Users size={16} />
+              {pendingParticipants.length}명
+            </div>
+          </div>
+
+          {approvalErrorMessage ? (
+            <div className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {approvalErrorMessage}
+            </div>
+          ) : null}
+          {pendingParticipantsErrorMessage ? (
+            <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+              {pendingParticipantsErrorMessage}
+            </div>
+          ) : null}
+
+          {isPendingParticipantsLoading ? (
+            <p className="text-sm font-semibold text-slate-500">
+              참가 승인 대기 목록을 불러오는 중입니다.
+            </p>
+          ) : pendingParticipants.length > 0 ? (
+            <div className="grid gap-2">
+              {pendingParticipants.map((participant) => (
+                <div
+                  className="flex flex-col gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  key={participant.participantId}
+                >
+                  <div>
+                    <div className="font-bold text-slate-900">{participant.serviceUsername}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 size={13} />
+                        {participant.requestedAt}
+                      </span>
+                      <span>
+                        {participant.status === 'PENDING' ? '승인 대기' : '승인됨'}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    disabled={approvingParticipantId === participant.participantId}
+                    onClick={() => void approveParticipant(participant.participantId)}
+                    size="sm"
+                    type="button"
+                  >
+                    <CheckCircle2 size={15} />
+                    {approvingParticipantId === participant.participantId ? '승인 중' : '승인'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm font-semibold text-slate-500">
+              승인 대기 중인 참가 신청이 없습니다.
+            </p>
+          )}
+        </Card>
+      ) : null}
 
       <Card>
         <div className="mb-4 flex items-center justify-between gap-3">

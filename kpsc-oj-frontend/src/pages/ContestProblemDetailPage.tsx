@@ -3,6 +3,7 @@ import { RotateCcw, Send } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { Button, ButtonLink } from '../components/common/Button'
 import { MarkdownContent } from '../components/common/MarkdownContent'
+import { ResizableSplitPane } from '../components/common/ResizableSplitPane'
 import { ContestSubmissionTable } from '../components/contest/ContestSubmissionTable'
 import { CodeEditor, type CodeEditorLanguage } from '../components/problem/CodeEditor'
 import { ProblemExampleBlock } from '../components/problem/ProblemExampleBlock'
@@ -178,8 +179,10 @@ export function ContestProblemDetailPage(): ReactElement {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white">
-      <div className="grid min-h-0 flex-1 grid-rows-[0.9fr_1.1fr] overflow-hidden lg:grid-cols-[minmax(360px,0.85fr)_minmax(520px,1.15fr)] lg:grid-rows-none">
-        <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
+      <ResizableSplitPane
+        ariaLabel="대회 문제 영역과 코드 작성 영역 크기 조절"
+        firstPane={
+        <aside className="flex h-full min-h-0 w-full flex-col border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="flex shrink-0 items-center gap-6 border-b border-slate-200 px-5">
             <button
               aria-pressed={activeProblemPanelTab === 'statement'}
@@ -268,6 +271,42 @@ export function ContestProblemDetailPage(): ReactElement {
                       ))}
                     </div>
                   </div>
+                  {problem.subtasks.length > 0 ? (
+                    <div>
+                      <h3 className="mb-3 text-base font-black text-slate-950">
+                        서브테스크
+                      </h3>
+                      <div className="grid gap-3">
+                        {problem.subtasks.map((subtask) => (
+                          <div
+                            className="rounded-md border border-slate-200 bg-slate-50 p-4"
+                            key={subtask.order}
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded bg-white px-2 py-1 font-mono text-xs font-black text-slate-600">
+                                #{subtask.order}
+                              </span>
+                              <span className="rounded bg-blue-50 px-2 py-1 text-xs font-black text-blue-700">
+                                {subtask.score}점
+                              </span>
+                              <span className="rounded bg-white px-2 py-1 text-xs font-black text-slate-600">
+                                비공개 케이스 {subtask.testCases.length}개
+                              </span>
+                            </div>
+                            <p className="mt-3 text-sm font-black text-slate-900">
+                              {subtask.title}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-slate-500">
+                              선행 서브테스크:{' '}
+                              {subtask.prerequisiteSubtaskOrders.length > 0
+                                ? subtask.prerequisiteSubtaskOrders.join(', ')
+                                : '없음'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </section>
               </>
             ) : (
@@ -304,8 +343,9 @@ export function ContestProblemDetailPage(): ReactElement {
             )}
           </div>
         </aside>
-
-        <div className="flex min-h-0 flex-col bg-white">
+        }
+        secondPane={
+        <div className="flex h-full min-h-0 w-full flex-col bg-white">
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
             <div>
               <div className="text-xs font-bold uppercase text-slate-400">대회 제출</div>
@@ -378,17 +418,11 @@ export function ContestProblemDetailPage(): ReactElement {
               </div>
             ) : null}
 
-            {!canSubmit ? (
+            {!canSubmit && !isAuthenticated ? (
               <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-                {isAuthenticated ? (
-                  <Link className="text-blue-700" to={`/contests/${contestId}`}>
-                    참가 상태와 대회 진행 상태를 확인해주세요.
-                  </Link>
-                ) : (
-                  <Link className="text-blue-700" to="/login">
-                    로그인 후 제출할 수 있습니다.
-                  </Link>
-                )}
+                <Link className="text-blue-700" to="/login">
+                  로그인 후 제출할 수 있습니다.
+                </Link>
               </div>
             ) : null}
 
@@ -431,7 +465,8 @@ export function ContestProblemDetailPage(): ReactElement {
             </div>
           </div>
         </div>
-      </div>
+        }
+      />
     </div>
   )
 }

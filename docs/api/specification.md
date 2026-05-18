@@ -409,7 +409,7 @@
   - `SUBMISSION_NOT_FOUND`: 해당 제출이 존재하지 않음.
 
 ### GET /api/v1/contests
-- 설명: 접근 가능한 대회 목록을 조회한다. Authorization header가 있으면 PRIVATE contest 표시 여부 판단에 사용한다.
+- 설명: 대회 목록을 조회한다. `PUBLIC`/`PRIVATE`는 조회 가능 여부가 아니라 참가 승인 정책을 의미한다. Authorization header가 있으면 현재 사용자 기준 권한 판단에 사용한다.
 - 인증: public.
 - Path params: 없음.
 - Query params: 없음.
@@ -421,14 +421,14 @@
   - `startTime`: string, required, 대회 시작 datetime, null 불가.
   - `endTime`: string, required, 대회 종료 datetime, null 불가.
   - `status`: string, required, `DRAFT`, `SCHEDULED`, `RUNNING`, `ENDED`.
-  - `visibility`: string, required, `PUBLIC`, `PRIVATE`.
+  - `visibility`: string, required, `PUBLIC`, `PRIVATE`. `PUBLIC`은 참가 신청 즉시 승인, `PRIVATE`은 운영진 승인 필요.
 - Status codes:
   - 200: 대회 목록 조회 성공.
 - Error cases:
   - `AUTHENTICATION_FAILED`: Authorization header가 있지만 session이 유효하지 않음.
 
 ### GET /api/v1/contests/{contestId}
-- 설명: 대회 상세와 현재 사용자의 운영진/참가자 상태를 조회한다.
+- 설명: 대회 상세와 현재 사용자의 운영진/참가자 상태를 조회한다. 대회 기간과 참가 승인 여부와 무관하게 상세 정보는 조회할 수 있다.
 - 인증: public.
 - Path params:
   - `contestId`: string, required, Contest UUID.
@@ -440,21 +440,19 @@
   - `description`: string, required, 대회 설명.
   - `startTime`: string, required, 대회 시작 datetime.
   - `endTime`: string, required, 대회 종료 datetime.
-  - `visibility`: string, required, `PUBLIC`, `PRIVATE`.
+  - `visibility`: string, required, `PUBLIC`, `PRIVATE`. `PUBLIC`은 참가 신청 즉시 승인, `PRIVATE`은 운영진 승인 필요.
   - `registrationMode`: string, required, `OPEN`, `STAFF_ONLY`.
   - `status`: string, required, `DRAFT`, `SCHEDULED`, `RUNNING`, `ENDED`.
   - `isStaff`: boolean, required, 현재 사용자가 ADMIN 또는 ContestStaff이면 true.
   - `isParticipant`: boolean, required, 현재 사용자가 ContestParticipant이면 true.
 - Status codes:
   - 200: 대회 상세 조회 성공.
-  - 403: PRIVATE 대회 조회 권한 없음.
   - 404: 대회가 존재하지 않음.
 - Error cases:
   - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
-  - `CONTEST_FORBIDDEN`: PRIVATE 대회 조회 권한 없음.
 
 ### POST /api/v1/contests/{contestId}/join
-- 설명: 현재 인증 사용자를 OPEN 대회 참가자로 등록한다. 이미 참가한 경우도 성공한다.
+- 설명: 대회 참가 신청을 처리한다. `PUBLIC` 대회는 즉시 `APPROVED` 참가자가 되고, `PRIVATE` 대회는 `PENDING` 참가 신청으로 저장된 뒤 OWNER 또는 ADMIN 승인이 필요하다. 이미 신청 또는 승인된 경우도 성공이다.
 - 인증: authenticated.
 - Path params:
   - `contestId`: string, required, Contest UUID.
@@ -462,16 +460,65 @@
 - Request body: 없음.
 - Response body:
   - `contestId`: string, required, Contest UUID.
-  - `joined`: boolean, required, 성공 시 항상 true.
+  - `joined`: boolean, required, `APPROVED`이면 true, `PENDING`이면 false.
+  - `participationStatus`: string, required, `PENDING`, `APPROVED`.
 - Status codes:
-  - 200: 참가 완료 또는 이미 참가 중.
+  - 200: 참가 완료, 참가 신청 접수, 또는 기존 신청/참가 상태 확인.
   - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
-  - 403: STAFF_ONLY 대회 직접 참가 권한 없음.
+  - 403: STAFF_ONLY 대회 직접 참가 권한 없음 또는 참가 신청 권한 없음.
   - 404: 대회가 존재하지 않음.
 - Error cases:
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `CONTEST_FORBIDDEN`: 참가 권한 없음.
   - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+
+### GET /api/v1/contests/{contestId}/participants/pending
+- 설명: OWNER 또는 ADMIN이 승인 대기 중인 참가 신청 목록을 조회한다.
+- 인증: authenticated. Contest OWNER 또는 ADMIN 필요.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body: array.
+  - `participantId`: string, required, 참가 신청 UUID.
+  - `userAccountId`: string, required, 사용자 계정 UUID.
+  - `serviceUsername`: string, required, 신청자 서비스 아이디.
+  - `status`: string, required, `PENDING`.
+  - `requestedAt`: string, required, 신청 datetime.
+- Status codes:
+  - 200: 승인 대기 목록 조회 성공.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: OWNER 또는 ADMIN 권한 없음.
+  - 404: 대회가 존재하지 않음.
+- Error cases:
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_STAFF_REQUIRED`: 참가 승인 권한 필요.
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+
+### POST /api/v1/contests/{contestId}/participants/{participantId}/approve
+- 설명: OWNER 또는 ADMIN이 참가 신청을 승인해 해당 사용자를 대회 참가자로 만든다.
+- 인증: authenticated. Contest OWNER 또는 ADMIN 필요.
+- Path params:
+  - `contestId`: string, required, Contest UUID.
+  - `participantId`: string, required, 참가 신청 UUID.
+- Query params: 없음.
+- Request body: 없음.
+- Response body:
+  - `participantId`: string, required, 참가 신청 UUID.
+  - `userAccountId`: string, required, 사용자 계정 UUID.
+  - `serviceUsername`: string, required, 신청자 서비스 아이디.
+  - `status`: string, required, 승인 후 `APPROVED`.
+  - `requestedAt`: string, required, 신청 datetime.
+- Status codes:
+  - 200: 참가 신청 승인 성공.
+  - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
+  - 403: OWNER 또는 ADMIN 권한 없음.
+  - 404: 대회 또는 참가 신청이 존재하지 않음.
+- Error cases:
+  - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
+  - `CONTEST_STAFF_REQUIRED`: 참가 승인 권한 필요.
+  - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+  - `CONTEST_PARTICIPANT_NOT_FOUND`: `participantId`가 해당 contest에 존재하지 않음.
 
 ### GET /api/v1/contests/{contestId}/problems
 - 설명: 대회 전용 문제 목록과 현재 사용자의 풀이 상태를 조회한다.
@@ -496,7 +543,7 @@
   - `CONTEST_FORBIDDEN`: 조회 권한 없음.
 
 ### GET /api/v1/contests/{contestId}/problems/{contestProblemId}
-- 설명: 대회 전용 문제 상세를 조회한다. HIDDEN testcase는 응답에 포함하지 않는다.
+- 설명: 대회 전용 문제 상세를 조회한다. 공개 예시 테스트 케이스와 서브테스크 메타데이터만 반환하며 HIDDEN testcase 본문은 응답에 포함하지 않는다.
 - 인증: public.
 - Path params:
   - `contestId`: string, required, Contest UUID.
@@ -519,6 +566,13 @@
   - `exampleTestCases[].caseOrder`: number, required, 예제 순서.
   - `exampleTestCases[].input`: string, required, 예제 입력.
   - `exampleTestCases[].output`: string, required, 예제 출력.
+  - `subtasks`: array, required, 서브테스크 목록. 서브테스크가 없는 일반 대회 문제이면 빈 배열.
+  - `subtasks[].order`: number, required, 같은 대회 문제 안에서 고유한 서브테스크 순서.
+  - `subtasks[].title`: string, required, 서브테스크 제목.
+  - `subtasks[].score`: number, required, 서브테스크 최대 점수.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, required, 이 서브테스크가 점수를 받기 전에 통과되어야 하는 같은 문제의 서브테스크 순서 목록. 없으면 빈 배열.
+  - `subtasks[].testCases`: array, required, 해당 서브테스크에 속한 HIDDEN 테스트 케이스 메타데이터. 입력/출력 본문은 포함하지 않음.
+  - `subtasks[].testCases[].order`: number, required, judge 요청 기준 HIDDEN 테스트 케이스 순서.
 - Status codes:
   - 200: 문제 상세 조회 성공.
   - 403: PRIVATE 대회 조회 권한 없음.
@@ -529,7 +583,7 @@
   - `CONTEST_PROBLEM_NOT_FOUND`: `contestProblemId`가 해당 contest에 존재하지 않음.
 
 ### POST /api/v1/contests/{contestId}/problems
-- 설명: ADMIN 또는 ContestStaff가 대회 전용 문제와 testcase set을 생성한다.
+- 설명: ADMIN 또는 ContestStaff가 대회 전용 문제, 선택 checker code, 예시 정답 코드, testcase set 또는 선택 서브테스크를 생성한다. 저장 전에 예시 정답 코드를 HIDDEN 테스트 케이스 전체로 사전 채점하며, 성공한 경우에만 생성한다.
 - 인증: authenticated. ADMIN 또는 ContestStaff 필요.
 - Path params:
   - `contestId`: string, required, Contest UUID.
@@ -545,11 +599,21 @@
   - `memoryLimitKb`: number, required, 양수 KB.
   - `score`: number, required, 양수 점수.
   - `displayOrder`: number, required, 양수 표시 순서.
-  - `testCases`: array, required, 최소 1개 HIDDEN 포함.
+  - `checkerCode`: string, optional, C++17 checker code. 없거나 null이면 judge 기본 출력 비교를 사용하며, 제공 시 빈 문자열 또는 공백 문자열 불가.
+  - `referenceSolutionCode`: string, required, C++17 예시 정답 코드. 생성 전에 HIDDEN 테스트 케이스 전체로 judge 사전 채점을 수행하며 저장하지 않고 응답에도 포함하지 않는다. 빈 문자열 또는 공백 문자열 불가.
+  - `testCases`: array, required, 공개 예시와 일반 HIDDEN 테스트 케이스. 서브테스크가 없으면 최소 1개 HIDDEN이 필요하고, 서브테스크가 있으면 `testCases`에는 EXAMPLE만 포함한다.
   - `testCases[].caseOrder`: number, required, 양수 순서.
   - `testCases[].kind`: string, required, `EXAMPLE`, `HIDDEN`.
   - `testCases[].inputText`: string, required, 빈 문자열 가능.
   - `testCases[].outputText`: string, required, 빈 문자열 가능.
+  - `subtasks`: object array, optional, 서브테스크 문제의 배점과 HIDDEN 테스트 케이스 정의. 없거나 빈 배열이면 일반 문제로 처리한다.
+  - `subtasks[].order`: number, required when `subtasks[]` exists, 같은 대회 문제 안에서 고유한 양의 정수.
+  - `subtasks[].title`: string, required when `subtasks[]` exists, 1-64자 서브테스크 제목.
+  - `subtasks[].score`: number, required when `subtasks[]` exists, 0보다 큰 정수. 전체 서브테스크 score 합은 정확히 100이어야 함.
+  - `subtasks[].prerequisiteSubtaskOrders`: number array, optional, 같은 문제 안에서 먼저 통과되어야 하는 서브테스크 order 목록. 자기 자신, 존재하지 않는 order, 순환 dependency는 허용하지 않음.
+  - `subtasks[].testCases`: object array, required when `subtasks[]` exists, 최소 1개. 해당 서브테스크에 속한 실제 채점용 HIDDEN 테스트 케이스 목록.
+  - `subtasks[].testCases[].input`: string, required, 실제 채점용 입력 본문. 빈 문자열 가능.
+  - `subtasks[].testCases[].output`: string, required, 실제 채점용 기대 출력 본문. 빈 문자열 가능.
 - Response body:
   - `id`: string, required, ContestProblem UUID.
   - `contestId`: string, required, Contest UUID.
@@ -565,20 +629,23 @@
   - 401: access token 누락, 검증 실패, 만료, 또는 폐기된 session.
   - 403: 운영진 권한 없음.
   - 404: 대회가 존재하지 않음.
+  - 503: judge 서버 설정 누락, 연결 실패, 인증 실패, 또는 응답 매핑 실패로 예시 정답 코드 사전 채점을 완료하지 못함.
 - Error cases:
-  - `VALIDATION_ERROR`: request body, enum, 테스트 케이스 입력 오류.
+  - `VALIDATION_ERROR`: request body, enum, 빈 checker code, 빈 reference solution code, 테스트 케이스 입력 오류, 서브테스크 score 합/중복 order/선행 관계 오류.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `CONTEST_STAFF_REQUIRED`: ContestStaff 또는 ADMIN 권한 필요.
   - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
+  - `PROBLEM_VERIFICATION_FAILED`: 예시 정답 코드가 HIDDEN 테스트 케이스 전체를 통과하지 못함.
+  - `JUDGE_UNAVAILABLE`: judge 서버 문제로 예시 정답 코드 사전 채점 실패.
 
 ### PATCH /api/v1/contests/{contestId}/problems/{contestProblemId}
-- 설명: ADMIN 또는 ContestStaff가 대회 전용 문제 정의와 testcase set을 교체한다.
+- 설명: ADMIN 또는 ContestStaff가 대회 전용 문제 기본 정보, 선택 checker code, 선택 서브테스크와 testcase set을 교체한다. 수정 시 예시 정답 코드 사전 채점은 수행하지 않는다.
 - 인증: authenticated. ADMIN 또는 ContestStaff 필요.
 - Path params:
   - `contestId`: string, required, Contest UUID.
   - `contestProblemId`: string, required, ContestProblem UUID.
 - Query params: 없음.
-- Request body: `POST /api/v1/contests/{contestId}/problems`와 동일.
+- Request body: `POST /api/v1/contests/{contestId}/problems`와 거의 동일하되 `referenceSolutionCode`는 받지 않는다. 기존 testcase/subtask set은 요청 내용으로 교체된다.
 - Response body: `POST /api/v1/contests/{contestId}/problems`와 동일.
 - Status codes:
   - 200: 대회 문제 수정 완료.
@@ -587,7 +654,7 @@
   - 403: 운영진 권한 없음.
   - 404: 대회 또는 대회 문제가 존재하지 않음.
 - Error cases:
-  - `VALIDATION_ERROR`: request body, enum, 테스트 케이스 입력 오류.
+  - `VALIDATION_ERROR`: request body, enum, 빈 checker code, 테스트 케이스 입력 오류, 서브테스크 score 합/중복 order/선행 관계 오류.
   - `AUTHENTICATION_FAILED`: 인증이 없거나 session이 유효하지 않음.
   - `CONTEST_STAFF_REQUIRED`: ContestStaff 또는 ADMIN 권한 필요.
   - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
@@ -718,23 +785,23 @@
   - `rows[].cells[].firstSolved`: boolean, required, 해당 문제 최초 solved 여부.
 - Status codes:
   - 200: 스코어보드 조회 성공.
-  - 403: PRIVATE 대회 조회 권한 없음.
   - 404: 대회가 존재하지 않음.
 - Error cases:
   - `CONTEST_NOT_FOUND`: `contestId`가 존재하지 않음.
-  - `CONTEST_FORBIDDEN`: 조회 권한 없음.
 
 ## 외부 API 매핑
 - `src/services/authService.ts`는 백엔드 `POST /api/v1/auth/google`, `POST /api/v1/auth/signup`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`을 호출한다.
 - `src/services/problemService.ts`는 백엔드 `GET /api/v1/problems`, `GET /api/v1/problems/{problemNumber}`, `GET /api/v1/problems/{problemNumber}/definition`, `POST /api/v1/problems`, `PATCH /api/v1/problems/{problemNumber}`를 호출한다.
 - `src/services/submissionService.ts`는 백엔드 `POST /api/v1/submissions`, `GET /api/v1/submissions/me`, `GET /api/v1/submissions/{submissionId}`를 호출한다.
-- `src/services/contestService.ts`는 백엔드 `GET /api/v1/contests`, `GET /api/v1/contests/{contestId}`, `POST /api/v1/contests/{contestId}/join`, `GET/POST/PATCH/DELETE /api/v1/contests/{contestId}/problems`, 대회 제출 목록/생성, 스코어보드 API를 호출한다.
+- `src/services/contestService.ts`는 백엔드 `GET /api/v1/contests`, `GET /api/v1/contests/{contestId}`, `POST /api/v1/contests/{contestId}/join`, `GET /api/v1/contests/{contestId}/participants/pending`, `POST /api/v1/contests/{contestId}/participants/{participantId}/approve`, `GET/POST/PATCH/DELETE /api/v1/contests/{contestId}/problems`, 대회 제출 목록/생성, 스코어보드 API를 호출한다.
 - 제출 생성 후 `useSubmissionDetail`은 `GET /api/v1/submissions/{submissionId}`를 호출하고 `QUEUED`, `RUNNING`, `JUDGING`, `PENDING` 상태에서는 2.5초 간격으로 다시 조회한다.
 - `POST /api/v1/problems` 호출 화면은 `ProtectedRoute requiredRole="ADMIN"`으로 관리자 세션에만 노출하고, 백엔드 403 응답도 최종 권한 경계로 처리한다.
 - 문제 상세 화면은 `subtasks`가 있으면 서브테스크 제목, 배점, 테스트 케이스 개수를 표시하고 비공개 테스트 케이스 본문은 표시하지 않는다.
 - 문제 생성/수정 화면은 서브테스크 사용 여부에 따라 일반 `actualTestCaseInputs`/`actualTestCaseOutputs` 또는 `subtasks[].testCases` 중 하나를 전송한다. 서브테스크 사용 시 일반 실제 채점 테스트 케이스 배열은 빈 배열로 보낸다.
 - 문제 수정 화면은 `GET /api/v1/problems/{problemNumber}/definition`으로 전체 문제/서브테스크 정의를 채운 뒤 `PATCH /api/v1/problems/{problemNumber}`로 같은 DTO 구조를 저장한다. 두 API 모두 백엔드에서 문제 생성자 여부를 최종 검증한다.
 - 문제 생성 화면은 `checkerCode` 입력이 공백뿐이면 요청 body에서 생략한다.
+- 대회 문제 생성 화면은 `referenceSolutionCode`를 필수로 받아 `POST /api/v1/contests/{contestId}/problems`에만 전송한다. 대회 문제 수정 화면은 `referenceSolutionCode`를 전송하지 않는다.
+- 대회 문제 생성/수정 화면은 서브테스크 사용 여부에 따라 `testCases`에 일반 HIDDEN 테스트 케이스를 포함하거나, `testCases`에는 EXAMPLE만 두고 `subtasks[].testCases`로 HIDDEN 테스트 케이스를 전송한다. `checkerCode`가 공백이면 null을 전송해 기본 출력 비교를 사용한다.
 - 제출 상세 화면은 `totalScore`가 있으면 점수로 표시하고, 없으면 `scorePercentage`를 표시한다. `subtaskResults`가 있으면 서브테스크별 획득 점수와 상태를 표시한다.
 - `POST /api/v1/auth/google` 응답의 `requiresSignup=false`는 `AuthSession`, `requiresSignup=true`는 pending signup state로 정규화한다.
 - `POST /api/v1/auth/signup` 응답 token set은 즉시 `AuthSession`으로 변환하며, 이 시점에 로그인 완료 상태가 된다.

@@ -1,5 +1,5 @@
-import type { ReactElement } from 'react'
-import { BookOpen, LogIn, LogOut } from 'lucide-react'
+import type { ReactElement, ReactNode } from 'react'
+import { LogIn, LogOut } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { Button, ButtonLink } from '../common/Button'
 import { useAuth } from '../../stores/useAuth'
@@ -11,6 +11,12 @@ type HeaderNavigationItem = {
   to: string
 }
 
+type SiteHeaderProps = {
+  actionSlot?: ReactNode
+  brandTo?: string
+  navigationSlot?: ReactNode
+}
+
 const navigationItems: HeaderNavigationItem[] = [
   { label: '문제', to: '/problems' },
   { label: '대회', to: '/contests' },
@@ -19,13 +25,35 @@ const navigationItems: HeaderNavigationItem[] = [
   { adminOnly: true, label: '출제', to: '/admin/problems/new' },
 ]
 
-export function SiteHeader(): ReactElement {
+function DefaultHeaderNavigation({ isAdmin }: { isAdmin: boolean }): ReactElement {
+  return (
+    <nav className="hidden items-center justify-center gap-6 text-sm font-semibold text-slate-600 md:flex">
+      {navigationItems
+        .filter((item) => !item.adminOnly || isAdmin)
+        .map((item) => (
+          <NavLink
+            className={({ isActive }) => (isActive ? 'text-blue-700' : 'hover:text-blue-700')}
+            key={item.to}
+            to={item.to}
+          >
+            {item.label}
+          </NavLink>
+        ))}
+    </nav>
+  )
+}
+
+export function SiteHeader({
+  actionSlot,
+  brandTo = '/',
+  navigationSlot,
+}: SiteHeaderProps): ReactElement {
   const { isAdmin, isAuthenticated, session, signOut } = useAuth()
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link className="flex items-center gap-3" to="/">
+      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-4 sm:px-6 lg:px-8">
+        <Link className="flex items-center gap-3" to={brandTo}>
           <span className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-600 text-sm font-black text-white">
             K
           </span>
@@ -35,23 +63,12 @@ export function SiteHeader(): ReactElement {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
-          {navigationItems
-            .filter((item) => !item.adminOnly || isAdmin)
-            .map((item) => (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? 'text-blue-700' : 'hover:text-blue-700'
-                }
-                key={item.to}
-                to={item.to}
-              >
-                {item.label}
-              </NavLink>
-            ))}
-        </nav>
+        <div className="min-w-0 justify-self-center">
+          {navigationSlot ?? <DefaultHeaderNavigation isAdmin={isAdmin} />}
+        </div>
 
         <div className="flex items-center gap-2">
+          {actionSlot}
           <ThemeModeToggle />
           {isAuthenticated && session ? (
             <>
@@ -75,10 +92,6 @@ export function SiteHeader(): ReactElement {
               로그인
             </ButtonLink>
           )}
-          <ButtonLink size="sm" to="/problems">
-            <BookOpen size={16} />
-            시작하기
-          </ButtonLink>
         </div>
       </div>
     </header>

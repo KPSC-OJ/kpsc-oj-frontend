@@ -43,17 +43,6 @@ function App() {
 
             <Route element={<AppLayout />}>
               <Route path="contests" element={<ContestsPage />} />
-              <Route path="contests/:contestId" element={<ContestLayout />}>
-                <Route index element={<ContestHomePage />} />
-                <Route path="problems" element={<ContestProblemsPage />} />
-                <Route path="submissions" element={<ContestSubmissionsPage />} />
-                <Route path="scoreboard" element={<ContestScoreboardPage />} />
-                <Route path="manage/problems/new" element={<ContestProblemNewPage />} />
-                <Route
-                  path="manage/problems/:contestProblemId/edit"
-                  element={<ContestProblemEditPage />}
-                />
-              </Route>
               <Route
                 path="problems"
                 element={
@@ -101,6 +90,18 @@ function App() {
                     <AdminProblemEditPage />
                   </ProtectedRoute>
                 }
+              />
+            </Route>
+
+            <Route path="contests/:contestId" element={<ContestLayout />}>
+              <Route index element={<ContestHomePage />} />
+              <Route path="problems" element={<ContestProblemsPage />} />
+              <Route path="submissions" element={<ContestSubmissionsPage />} />
+              <Route path="scoreboard" element={<ContestScoreboardPage />} />
+              <Route path="manage/problems/new" element={<ContestProblemNewPage />} />
+              <Route
+                path="manage/problems/:contestProblemId/edit"
+                element={<ContestProblemEditPage />}
               />
             </Route>
 

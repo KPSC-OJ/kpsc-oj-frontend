@@ -15,7 +15,7 @@ export function ProblemsPage() {
     <section>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-bold text-blue-600">Problems</p>
+          <p className="text-sm font-bold text-blue-600">문제</p>
           <h1 className="text-2xl font-black text-slate-950">문제 목록</h1>
           <p className="mt-1 text-sm text-slate-500">
             백엔드에 등록된 문제를 문제 번호 순서로 조회합니다.
